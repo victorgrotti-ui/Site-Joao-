@@ -1,6 +1,8 @@
 # CMH Cleaning — Internal Office Deployment
 
-CMH Cleaning runs on **one office computer**. That computer keeps the company records. You open the system in a web browser. A phone on the same office Wi-Fi opens the same records. Nothing is put on the public internet.
+The installation steps for the owner’s computer are in [OFFICE_DEPLOYMENT.md](OFFICE_DEPLOYMENT.md).
+
+CMH Cleaning runs on **one office computer**. That computer keeps the company records in `prisma/production.db`. You open the system in a web browser. A phone on the same office Wi-Fi opens the same records. Nothing is put on the public internet. Do not use `prisma/dev.db` for company records. That file is only for development.
 
 **Do not forward port 3001 to the internet.**
 
@@ -30,13 +32,13 @@ cp .env.example .env
 Open `.env`. Find `JWT_SECRET`. Replace the placeholder with a long random code. You can create one with:
 
 ```bash
-openssl rand -base64 48
+node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
 ```
 
 Leave `PORT=3001`. Do not type the office computer’s number address into the program. The program finds that address itself.
 
 ```bash
-npm run db:setup
+npm run db:office
 npm run admin:create
 npm run build
 ```
@@ -69,7 +71,12 @@ Do not type that address into CMH. If the number ever changes, start the server 
 
 When the server is running, it tells the office network that `cmh-cleaning.local` means this computer. The office computer, and many phones on the same Wi-Fi, can then open http://cmh-cleaning.local:3001
 
-Phones do not all understand that announcement. Guest Wi-Fi usually blocks it. If a phone cannot open the name:
+Phones do not all understand that announcement. Guest Wi-Fi usually blocks it. The address on a phone looks like `http://192.168.1.20:3001`. The server window prints the exact address. You can also find it on the office computer:
+
+- Windows: open Command Prompt and run `ipconfig`. Use the IPv4 Address for the Wi-Fi adapter. It usually starts with `192.168.`
+- Mac: open System Settings, then Network, then Wi-Fi, then Details. Or in Terminal run `ipconfig getifaddr en0`.
+
+If a phone cannot open the name:
 
 1. Connect the phone to the same private office Wi-Fi, not the guest network.
 2. Use the number address printed in the server window, for example `http://192.168.1.20:3001`.
@@ -153,12 +160,12 @@ npm run admin:reset-password
 ## Where the records live
 
 ```text
-prisma/dev.db
+prisma/production.db
 ```
 
-Employees, jobs, expenses, payments, reimbursements and profit all come from this file. Reports are calculated from it. Restarting the server does not delete it. The phone never stores a separate copy.
+Employees, jobs, expenses, payments, reimbursements and profit all come from this file. Reports are calculated from it. Restarting the server does not delete it. The phone never stores a separate copy. `npm run db:office` creates this file empty. It does not copy `prisma/dev.db`.
 
-While the server is running, two extra files may appear next to it: `prisma/dev.db-wal` and `prisma/dev.db-shm`. Leave them alone until the server is stopped.
+While the server is running, two extra files may appear next to it: `prisma/production.db-wal` and `prisma/production.db-shm`. Leave them alone. Do not copy those files by hand while the server is open. Use `npm run db:backup`, which saves one consistent file.
 
 ## Troubleshooting
 
@@ -189,7 +196,7 @@ The sections below are for the person who installs or maintains the system.
 ```bash
 npm install
 cp .env.example .env
-npm run db:setup
+npm run db:office
 npm run admin:create
 npm run build
 npm start
@@ -199,13 +206,14 @@ npm start
 | --- | --- |
 | `npm run dev` | Development only, on the office computer, at http://localhost:5173. Other devices must not use this. |
 | `npm start` | The internal system. The browser and the records are served together on port 3001. |
-| `npm run db:setup` | Creates `prisma/dev.db` and company settings. It does not add sample jobs or payments. |
-| `npm run db:backup` | Writes `backups/cmh-backup-YYYYMMDD-HHMMSS.db` |
+| `npm run db:office` | Creates empty `prisma/production.db` and company settings. It refuses to use `prisma/dev.db`. |
+| `npm run db:setup` | Development only. Uses whatever `DATABASE_URL` is set, usually `prisma/dev.db`. |
+| `npm run db:backup` | Writes `backups/cmh-backup-YYYYMMDD-HHMMSS.db` with SQLite `VACUUM INTO` |
 | `npm run db:restore -- <file>` | Replaces the database with a backup after you type `RESTORE` |
 | `npm run admin:create` | Creates an administrator. Passwords are stored as bcrypt hashes. |
 | `npm run admin:reset-password` | Sets a new administrator password on this computer |
 
-`DATABASE_URL="file:./dev.db"` is relative to the `prisma` folder. `HOST` stays unset so the server listens on this computer and on private office addresses only. Set `HOST=127.0.0.1` only to keep other devices out. Leave `COOKIE_SECURE` unset for the internal `http://` address.
+`DATABASE_URL="file:./production.db"` is relative to the `prisma` folder. `HOST` stays unset so the server listens on this computer and on private office addresses only. It does not listen on a public internet address. Set `HOST=127.0.0.1` only to keep other devices out. Leave `COOKIE_SECURE` unset for the internal `http://` address. Leave `CMH_BIND` unset.
 
 To avoid showing the password while creating the account:
 
@@ -222,7 +230,8 @@ Use a real password. Do not commit it.
 | `.env` | Contains `JWT_SECRET` |
 | `JWT_SECRET` | Signs the sign-in cookie |
 | `ADMIN_PASSWORD` | Only for the one command that creates an account |
-| `prisma/dev.db` and its `-wal` / `-shm` files | Company records |
+| `prisma/production.db` and its `-wal` / `-shm` files | Company records |
+| `prisma/dev.db` and its `-wal` / `-shm` files | Development records. Do not use them as the company database. |
 | `backups/` | Copies of those records |
 
 `.env.example` is safe to commit because its secret is a placeholder.

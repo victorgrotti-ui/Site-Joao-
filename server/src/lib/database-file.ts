@@ -1,5 +1,10 @@
 import path from 'path'
 
+/** True when the file is the development database, which must not hold company records. */
+export function isDevelopmentDatabaseFile(filePath: string): boolean {
+  return path.basename(filePath).toLowerCase() === 'dev.db'
+}
+
 /** Absolute path of the SQLite file named by DATABASE_URL. Relative paths follow the Prisma folder. */
 export function sqliteFilePath(): string {
   const url = process.env.DATABASE_URL ?? ''
