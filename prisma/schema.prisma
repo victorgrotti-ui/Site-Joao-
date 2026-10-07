@@ -1,0 +1,184 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// SQLite stores these enums as strings. The same schema can move to PostgreSQL later.
+
+enum UserRole {
+  ADMIN
+  MANAGER
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ServiceType {
+  REGULAR_CLEANING
+  DEEP_CLEANING
+  END_OF_TENANCY
+  MOVE_IN_MOVE_OUT
+  OTHER
+}
+
+enum ExpenseCategory {
+  CLEANING_PRODUCTS
+  TRANSPORTATION
+  EQUIPMENT
+  SUPPLIES
+  OTHER
+}
+
+enum ExpenseOrigin {
+  MANUAL
+  SERVICE_PRODUCTS
+  SERVICE_OTHER
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+}
+
+enum PaymentItemKind {
+  WORK
+  REIMBURSEMENT
+}
+
+enum PaymentDay {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         UserRole @default(ADMIN)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Employee {
+  id          String         @id @default(cuid())
+  fullName    String
+  phone       String?
+  email       String?        @unique
+  defaultRate Int
+  status      EmployeeStatus @default(ACTIVE)
+  notes       String?
+  services    Service[]
+  expenses    Expense[]
+  payments    Payment[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model Service {
+  id                   String        @id @default(cuid())
+  serviceDate          DateTime
+  propertyAddress      String
+  serviceType          ServiceType
+  clientName           String
+  employeeId           String
+  employee             Employee      @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  revenue              Int
+  employeePayment      Int
+  cleaningProductsCost Int           @default(0)
+  otherExpenses        Int           @default(0)
+  notes                String?
+  expenses             Expense[]
+  paymentItems         PaymentItem[]
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  @@index([serviceDate])
+  @@index([employeeId])
+  @@index([clientName])
+}
+
+model Expense {
+  id           String          @id @default(cuid())
+  date         DateTime
+  category     ExpenseCategory
+  description  String
+  amount       Int
+  employeeId   String?
+  employee     Employee?       @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  serviceId    String?
+  service      Service?        @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  reimbursable Boolean         @default(false)
+  origin       ExpenseOrigin   @default(MANUAL)
+  notes        String?
+  paymentItems PaymentItem[]
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@index([date])
+  @@index([employeeId])
+  @@index([serviceId])
+  @@index([origin])
+}
+
+model Payment {
+  id             String        @id @default(cuid())
+  employeeId     String
+  employee       Employee      @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  periodStart    DateTime
+  periodEnd      DateTime
+  installment    Int           @default(1)
+  serviceCount   Int           @default(0)
+  workEarnings   Int
+  reimbursements Int
+  totalAmount    Int
+  status         PaymentStatus @default(PAID)
+  paymentDate    DateTime?
+  notes          String?
+  items          PaymentItem[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([employeeId, periodStart, periodEnd, installment])
+  @@index([paymentDate])
+  @@index([status])
+}
+
+model PaymentItem {
+  id        String          @id @default(cuid())
+  paymentId String
+  payment   Payment         @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  serviceId String?
+  service   Service?        @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  expenseId String?
+  expense   Expense?        @relation(fields: [expenseId], references: [id], onDelete: Restrict)
+  kind      PaymentItemKind
+  amount    Int
+  createdAt DateTime        @default(now())
+
+  @@index([serviceId])
+  @@index([expenseId])
+}
+
+model CompanySettings {
+  id                String     @id @default("default")
+  companyName       String     @default("CMH Cleaning")
+  currency          String     @default("GBP")
+  defaultPaymentDay PaymentDay @default(SATURDAY)
+  email             String?
+  phone             String?
+  address           String?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+}
