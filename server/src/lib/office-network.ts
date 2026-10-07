@@ -32,6 +32,20 @@ export function officeListenAddresses(configuredHost: string, detectedAddresses:
   return [host]
 }
 
+/**
+ * Temporary public hosts must receive traffic on 0.0.0.0.
+ * The office computer leaves CMH_BIND unset, so this stays off.
+ */
+export function publicBindRequested(env: { CMH_BIND?: string; RENDER?: string }): boolean {
+  return env.CMH_BIND === '0.0.0.0' || env.RENDER === 'true'
+}
+
+/** Office addresses, or 0.0.0.0 when a temporary public host requires it. */
+export function listenTargets(configuredHost: string, detectedAddresses: string[], bindAllInterfaces: boolean): string[] {
+  if (bindAllInterfaces) return ['0.0.0.0']
+  return officeListenAddresses(configuredHost, detectedAddresses)
+}
+
 function encodeDnsName(name: string): Buffer {
   const parts = name.split('.').filter((part) => part.length > 0)
   const chunks = parts.map((part) => Buffer.concat([Buffer.from([part.length]), Buffer.from(part)]))

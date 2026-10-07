@@ -1,0 +1,28 @@
+# Temporary iPad test only. This is not the office deployment.
+# Render Free deletes the SQLite file whenever the service restarts or spins down.
+# The office computer should keep using the local database and leave CMH_BIND unset.
+services:
+  - type: web
+    name: cmh-cleaning-test
+    runtime: node
+    plan: free
+    buildCommand: npm install --include=dev && npx prisma generate && npm run build && npx prisma migrate deploy
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        value: file:./dev.db
+      - key: CMH_BIND
+        value: 0.0.0.0
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_NAME
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
