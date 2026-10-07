@@ -1,9 +1,10 @@
 import os from 'os'
 import { createApp } from './app'
+import { FRIENDLY_HOST, advertiseFriendlyName, isPrivateLanAddress, officeListenAddresses } from './lib/office-network'
 import { prisma } from './lib/prisma'
 import { ensureSettings } from './lib/settings'
 
-function lanAddresses(): string[] {
+function detectedAddresses(): string[] {
   const found: string[] = []
   for (const entries of Object.values(os.networkInterfaces())) {
     for (const entry of entries ?? []) {
@@ -34,20 +35,37 @@ async function main() {
 
   const port = Number(process.env.PORT || 3001)
   const host = process.env.HOST?.trim() || '0.0.0.0'
+  const detected = detectedAddresses()
+  const targets = officeListenAddresses(host, detected)
   const app = createApp()
-  app.listen(port, host, () => {
-    console.log(`CMH Cleaning is running on this computer at http://127.0.0.1:${port}`)
-    if (host === '0.0.0.0' || host === '::') {
-      const addresses = lanAddresses()
-      if (addresses.length === 0) {
-        console.log('No other network address was found. Other devices cannot reach this computer yet.')
-      }
-      for (const address of addresses) {
-        console.log(`Other devices on the same network: http://${address}:${port}`)
+  let ready = 0
+
+  const onReady = () => {
+    ready += 1
+    if (ready !== targets.length) return
+    const privateAddresses = targets.filter(isPrivateLanAddress)
+    console.log('CMH Cleaning is ready.')
+    console.log(`Open http://${FRIENDLY_HOST}:${port}`)
+    console.log(`On this computer, if that name does not open yet, use http://127.0.0.1:${port}`)
+    if (privateAddresses.length === 0) {
+      console.log('No private office address was found. Other devices cannot reach this computer yet.')
+    } else {
+      advertiseFriendlyName(privateAddresses)
+      console.log(`Phones on the same office Wi-Fi can use http://${FRIENDLY_HOST}:${port} as well.`)
+      for (const address of privateAddresses) {
+        console.log(`If a phone cannot open the name, use http://${address}:${port}`)
       }
     }
-    console.log('Use one office computer as the server. Other people open that address in a browser.')
-  })
+    console.log('Do not forward port 3001 to the internet.')
+  }
+
+  for (const address of targets) {
+    const server = app.listen(port, address, onReady)
+    server.on('error', (error: NodeJS.ErrnoException) => {
+      console.error(`Could not open port ${port} on ${address}. ${error.message}`)
+      process.exit(1)
+    })
+  }
 }
 
 main().catch((error) => {

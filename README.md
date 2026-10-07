@@ -1,179 +1,221 @@
-# CMH Cleaning Management System
+# CMH Cleaning — Internal Office Deployment
 
-Internal system for CMH Cleaning. It keeps employees, cleaning services, expenses, weekly payments and profit in one SQLite database.
+CMH Cleaning runs on **one office computer**. That computer keeps the company records. You open the system in a web browser. A phone on the same office Wi-Fi opens the same records. Nothing is put on the public internet.
 
-One office computer runs the server. Managers and phones open that computer’s address in a browser. They do not each get a separate database, and the database file is never opened by the browser.
+**Do not forward port 3001 to the internet.**
 
-Mark as Paid only changes a record from pending to paid. The system does not send money and does not connect to a bank, card or payment service.
+The address to remember is:
+
+```text
+http://cmh-cleaning.local:3001
+```
 
 ## What you need
 
-- Node.js 20 or newer
-- npm
-- The office computer stays on while people are using the system
+- The office computer, left on while you use the system
+- Node.js 20 or newer, installed once from [https://nodejs.org](https://nodejs.org)
+- This project folder on that same computer
 
-## A. Install dependencies
+You do not need a website address, a cloud service, or a second copy of the program on the phone.
 
-From the project folder:
+## One-time setup
+
+In the project folder:
 
 ```bash
 npm install
-```
-
-## B. Configure environment variables
-
-```bash
 cp .env.example .env
 ```
 
-Open `.env` and replace `JWT_SECRET` with a long random string. The server refuses to start while the placeholder is still there.
+Open `.env`. Find `JWT_SECRET`. Replace the placeholder with a long random code. You can create one with:
 
 ```bash
 openssl rand -base64 48
 ```
 
-Leave the other values as they are for normal internal use:
-
-```text
-DATABASE_URL="file:./dev.db"
-PORT=3001
-```
-
-`HOST` can stay unset. The office server then accepts connections from this computer and from other devices on the same private network.
-
-Leave `COOKIE_SECURE` unset. Set it to `true` only if you later serve the system over HTTPS. On a normal internal `http://` address, a secure-only cookie would block sign-in.
-
-Do not commit `.env`.
-
-## C. Create the database
+Leave `PORT=3001`. Do not type the office computer’s number address into the program. The program finds that address itself.
 
 ```bash
 npm run db:setup
-```
-
-This creates `prisma/dev.db`, applies the migrations, and saves the company settings. It does not add employees, services, expenses or payments.
-
-| Command | What it does |
-| --- | --- |
-| `npm run db:generate` | Regenerates the Prisma client |
-| `npm run db:migrate` | Creates a new migration while developing |
-| `npm run db:deploy` | Applies existing migrations |
-| `npm run db:seed` | Ensures company settings exist, without sample finance data |
-| `npm run db:reset` | Deletes the local database, reapplies migrations and settings |
-| `npm run db:backup` | Writes a snapshot into `backups/` |
-| `npm run db:restore -- <file>` | Replaces the database with a backup |
-
-## D. Create the first administrator
-
-There is no public registration page. On the office computer:
-
-```bash
 npm run admin:create
-```
-
-The command asks for a full name, email and password of at least 8 characters. The password is visible while you type. To avoid that:
-
-```bash
-ADMIN_NAME="Your Name" ADMIN_EMAIL="you@example.com" ADMIN_PASSWORD="a-long-password" npm run admin:create
-```
-
-Use your own email and password. Do not reuse an example password, and do not commit those values.
-
-Passwords are stored as bcrypt hashes. Run `npm run admin:create` again with a different email when another manager needs an account. Every account uses the same database on the office computer.
-
-## E. Start the application for daily development
-
-Use this only on the office computer while you are changing the software:
-
-```bash
-npm run dev
-```
-
-Open http://localhost:5173 on that same computer. This address is for development. Other devices should use the internal address in the next section.
-
-## F. Build and run it for internal use
-
-On the office computer:
-
-```bash
 npm run build
-npm start
 ```
 
-`npm start` serves the finished application and the API together. The terminal prints:
+`npm run admin:create` asks for your name, email and a password of at least 8 characters. This is the only sign-in. There is no public registration page. Use your own email and password. Do not reuse an example password.
 
-- `http://127.0.0.1:3001` for the office computer itself
-- `http://<office-computer-ip>:3001` for other devices on the same network
+There is one administrator account for the owner. A second person can have an account later with `npm run admin:create` and a different email. Both accounts use the same records on the office computer.
 
-Keep that terminal open. Closing it stops the system for everyone.
+## Every day
 
-To keep the server on this computer only, set `HOST=127.0.0.1` in `.env` before `npm start`.
+A. Turn on the office computer.
+B. Start the CMH server. Double-click `scripts/start-cmh` on Windows (`start-cmh.cmd`) or run `scripts/start-cmh.sh` on a Mac. You can also run `npm start` in the project folder.
+C. Open the browser on that computer.
+D. Go to http://cmh-cleaning.local:3001
+E. Sign in.
+F. Use the system. Add employees, cleaning jobs, expenses and payments here.
+G. When you want a spare copy of the records, create a backup. The steps are below.
 
-## G. How another device on the same network opens it
+Leave the server window open. Closing it stops the system for every device.
 
-Other phones and computers only need a browser. They do not install the project and they do not create a database.
+If the friendly name does not open on the office computer yet, use http://127.0.0.1:3001 on that computer only. The hosts-file step below makes the friendly name work.
 
-1. Connect them to the same private network as the office computer.
-2. Open the network address printed by `npm start`, for example `http://192.168.1.20:3001`.
-3. Sign in with an administrator account created on the office computer.
+## Keep the same office address
 
-Give the office computer a reserved address on the router if you want that IP to stay the same.
+On the router, reserve the office computer’s address. The router setting is often called DHCP reservation, “always use this IP address”, or an address reservation. Choose the office computer and save.
 
-Optional name, without buying a domain: on each device, add a line to its hosts file, using the office computer’s IP:
+Do not type that address into CMH. If the number ever changes, start the server again and it will use the new one. A reserved address means you should not have to do that.
+
+## The name cmh-cleaning.local
+
+When the server is running, it tells the office network that `cmh-cleaning.local` means this computer. The office computer, and many phones on the same Wi-Fi, can then open http://cmh-cleaning.local:3001
+
+Phones do not all understand that announcement. Guest Wi-Fi usually blocks it. If a phone cannot open the name:
+
+1. Connect the phone to the same private office Wi-Fi, not the guest network.
+2. Use the number address printed in the server window, for example `http://192.168.1.20:3001`.
+3. Keep the router reservation so that number stays the same, then save it as a bookmark.
+
+On the office computer, you can also make the name work even when the network announcement does not. Add one line to the hosts file:
 
 ```text
-192.168.1.20 cmh-cleaning.local
+127.0.0.1 cmh-cleaning.local
 ```
 
-Those devices can then open http://cmh-cleaning.local:3001. The name works only on devices where that line was added.
+- Windows: open Notepad as administrator, open `C:\Windows\System32\drivers\etc\hosts`, add the line, and save.
+- Mac: in Terminal, run `sudo nano /etc/hosts`, add the line, and save.
 
-Do not forward port 3001 on the router. Do not publish the address on the public internet. If the office computer has a firewall, allow incoming TCP port 3001 from the private network only.
+This line points only at the office computer itself. It does not publish the system on the internet. A phone cannot use `127.0.0.1`. The phone uses the name announcement or the number address above.
 
-## H. Where the database is stored
+Do not buy a public website name for this.
 
-```text
-prisma/dev.db
-```
+## A phone sees the same records
 
-The path comes from `DATABASE_URL`. A value of `file:./dev.db` is relative to the `prisma` folder. While the server is running, SQLite may also create `prisma/dev.db-wal` and `prisma/dev.db-shm`. Those belong with the database. Do not delete them while the server is running.
+The phone does not get its own copy of the records. It talks to the office computer.
 
-Reports, profit and payments are calculated from these records. Restarting the application does not clear them.
+If you add an employee on the phone, open the system on the office computer and the same employee is there. If you add a job on the office computer, it is on the phone as well.
 
-## I. Back up the database
+## Start the server when the computer starts
 
-On the office computer:
+Windows:
+
+1. Press the Windows key and type `shell:startup`, then press Enter.
+2. Copy a shortcut to `scripts\start-cmh.cmd` into that folder.
+
+The server window will open when you sign in to Windows. Leave it open.
+
+Mac:
+
+1. Open System Settings, then General, then Login Items.
+2. Add `scripts/start-cmh.sh`.
+
+## Backup
+
+On the office computer, in the project folder, while the server can stay running:
 
 ```bash
 npm run db:backup
 ```
 
-The snapshot is written to `backups/cmh-backup-YYYYMMDD-HHMMSS.db`. Copy that file to a private drive that stays in the office. Do not email it and do not commit it.
+The file is created here:
 
-Take a backup before `npm run db:reset` and before replacing the office computer.
+```text
+backups/cmh-backup-YYYYMMDD-HHMMSS.db
+```
 
-## J. Restore a backup
+Example: `backups/cmh-backup-20261007-093000.db`
 
-1. Stop `npm start` or `npm run dev`.
-2. Run:
+Copy that file onto a USB drive that stays in the office. Do not email it. Do not upload it. Do not commit it.
+
+Take a backup before replacing the office computer.
+
+## Restore
+
+1. Close the server window.
+2. In the project folder, run:
 
 ```bash
 npm run db:restore -- backups/cmh-backup-YYYYMMDD-HHMMSS.db
 ```
 
-3. Type `RESTORE` when asked.
-4. Start the application again and sign in.
+3. Type `RESTORE` and press Enter.
+4. Start the server again and sign in.
 
-The command refuses to continue while the database is still open, and it refuses a file that is not a SQLite database.
+The command stops if the server is still using the records, and it stops if the file is not a database backup.
 
-## K. Reset an administrator password
+## Forgot the password
+
+There is no email reset. On the office computer:
 
 ```bash
 npm run admin:reset-password
 ```
 
-Email recovery is not included. The sign-in page explains the same command.
+## Where the records live
 
-## L. Files that must not be committed
+```text
+prisma/dev.db
+```
+
+Employees, jobs, expenses, payments, reimbursements and profit all come from this file. Reports are calculated from it. Restarting the server does not delete it. The phone never stores a separate copy.
+
+While the server is running, two extra files may appear next to it: `prisma/dev.db-wal` and `prisma/dev.db-shm`. Leave them alone until the server is stopped.
+
+## Troubleshooting
+
+- The page does not open: the office computer must be on, and the server window must still be open.
+- The friendly name does not open on the office computer: use http://127.0.0.1:3001 there, then add the hosts line above.
+- The phone cannot connect: use the office Wi-Fi, not guest Wi-Fi. Try the number address from the server window. On Windows, if a firewall question appears, allow the program on private networks only.
+- Sign-in is rejected: use the administrator email and password created on the office computer.
+- **Do not forward port 3001 to the internet.**
+
+## Security
+
+- No public registration
+- No anonymous access to company records
+- No cloud database
+- No payment-provider connection
+- The secret in `.env` stays on the office computer and must not be committed
+
+Mark as Paid only updates the record. The system does not send money.
+
+---
+
+# Technical reference
+
+The sections below are for the person who installs or maintains the system.
+
+## Install and configure
+
+```bash
+npm install
+cp .env.example .env
+npm run db:setup
+npm run admin:create
+npm run build
+npm start
+```
+
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Development only, on the office computer, at http://localhost:5173. Other devices must not use this. |
+| `npm start` | The internal system. The browser and the records are served together on port 3001. |
+| `npm run db:setup` | Creates `prisma/dev.db` and company settings. It does not add sample jobs or payments. |
+| `npm run db:backup` | Writes `backups/cmh-backup-YYYYMMDD-HHMMSS.db` |
+| `npm run db:restore -- <file>` | Replaces the database with a backup after you type `RESTORE` |
+| `npm run admin:create` | Creates an administrator. Passwords are stored as bcrypt hashes. |
+| `npm run admin:reset-password` | Sets a new administrator password on this computer |
+
+`DATABASE_URL="file:./dev.db"` is relative to the `prisma` folder. `HOST` stays unset so the server listens on this computer and on private office addresses only. Set `HOST=127.0.0.1` only to keep other devices out. Leave `COOKIE_SECURE` unset for the internal `http://` address.
+
+To avoid showing the password while creating the account:
+
+```bash
+ADMIN_NAME="Your Name" ADMIN_EMAIL="you@example.com" ADMIN_PASSWORD="a-long-password" npm run admin:create
+```
+
+Use a real password. Do not commit it.
+
+## Files that must not be committed
 
 | Item | Why |
 | --- | --- |
@@ -183,13 +225,13 @@ Email recovery is not included. The sign-in page explains the same command.
 | `prisma/dev.db` and its `-wal` / `-shm` files | Company records |
 | `backups/` | Copies of those records |
 
-`.env.example` is safe to commit because the secret in it is a placeholder.
+`.env.example` is safe to commit because its secret is a placeholder.
 
 ## Language
 
-English is the default. The language menu is in the header, on the sign-in page, and in Settings. Português (Brasil) stays selected after a refresh. Names, addresses, notes and amounts are not translated. Currency stays GBP (£).
+English is the default. Português (Brasil) stays selected after a refresh. Names, addresses, notes and amounts are not translated. Currency stays GBP (£).
 
-## Daily use
+## Daily records
 
 1. Add employees and a usual rate.
 2. Add a service. Profit is revenue minus the employee payment, cleaning products and other expenses.
@@ -202,7 +244,7 @@ The calculation rules are in [docs/finance.md](docs/finance.md). The layout of t
 
 ## Logo
 
-The sign-in page, sidebar and browser icon use `public/cmh-cleaning-logo.png`. Replace that file with the official logo when you have it. Keep the filename. The image is shown with its original proportions.
+The sign-in page, sidebar and browser icon use `public/cmh-cleaning-logo.png`. Replace that file with the official logo when you have it. Keep the filename.
 
 ## Checks
 
@@ -214,8 +256,8 @@ npm run typecheck
 
 ## What is intentionally not included
 
-- No public hosting, public domain or paid service
+- No public hosting, public domain or cloud database
 - No sample financial records
 - No email password reset
 - No bank, card or payment-provider connection
-- No extra permission levels yet. Each account created with `npm run admin:create` is an administrator
+- No extra permission levels. Each account created with `npm run admin:create` is an administrator

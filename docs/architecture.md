@@ -12,7 +12,9 @@ docs/       Finance rules and this note
 
 The browser talks only to `/api`. It never opens the database file. In development, Vite proxies that path to the Express server. After `npm run build`, `npm start` serves the built client and the API from one process on port 3001. That process is the single source of truth: other devices on the private network open its address, and they do not run their own database.
 
-The office server listens on all network interfaces unless `HOST` is set. The sign-in cookie is `httpOnly`. It is marked secure only when `COOKIE_SECURE=true`, so a normal internal `http://` address can still sign in. Do not publish the port on the public internet.
+The office server listens on this computer (`127.0.0.1`) and on private office addresses such as `192.168.x.x`. It does not listen on a public internet address unless `HOST` is set to one on purpose. The friendly name is `cmh-cleaning.local` on port 3001. The program announces that name on the office network and does not store the IP address, so a DHCP change is picked up the next time the server starts. Do not forward port 3001 to the internet.
+
+The sign-in cookie is `httpOnly`. It is marked secure only when `COOKIE_SECURE=true`, so a normal internal `http://` address can still sign in.
 
 ## Data
 
@@ -46,6 +48,6 @@ Request bodies are checked with Zod on the server. The screens also check the fo
 
 Deleting an employee who already has services, expenses or payments disables them instead of removing the history.
 
-## Later database move
+## Office database
 
-Keep money in integer pence and keep the Prisma models. Changing `provider` from `sqlite` to `postgresql` and supplying a Postgres `DATABASE_URL` is the migration path. The SQLite `PRAGMA` used at startup runs only when the URL starts with `file:`.
+The office deployment uses the SQLite file on this computer. Do not point it at a cloud database. The SQLite `PRAGMA` used at startup runs only when `DATABASE_URL` starts with `file:`.

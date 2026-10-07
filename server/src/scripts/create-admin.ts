@@ -70,7 +70,8 @@ async function main() {
     },
   })
   console.log(`\nAdministrator created for ${email}.`)
-  console.log('Start the office server with npm run build && npm start, then sign in at the address it prints.')
+  console.log('Start the office server with npm run build && npm start.')
+  console.log('Then open http://cmh-cleaning.local:3001 and sign in.')
 }
 
 main()
