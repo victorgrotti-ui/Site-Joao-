@@ -58,6 +58,7 @@ describe('CMH financial rules', () => {
     assert.equal(totals.revenue, 25000)
     assert.equal(totals.employeePayments, 11000)
     assert.equal(totals.expenses, 2000)
+    assert.equal(totals.reimbursements, 2000)
     assert.equal(totals.profit, 12000)
   })
 

@@ -3,6 +3,7 @@ import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { ConfirmDialog, Modal } from '../components/Modal'
 import { Badge, Button, Card, EmptyState, ErrorBanner, Field, LoadingState, MoneyInput, PageHeader, SelectInput, TextArea, TextInput, statusLabel, statusTone, tdClass, thClass } from '../components/ui'
 import { useToast } from '../context/ToastContext'
+import { useI18n } from '../i18n'
 import { api, errorMessage, fieldErrors } from '../lib/api'
 import { presetRange, todayISO } from '../lib/dates'
 import { formatDate, formatGBP, parseMoneyToPence, penceToInput } from '../lib/format'
@@ -26,7 +27,8 @@ function blank(): ExpenseForm {
 }
 
 export function ExpensesPage() {
-  useTitle('Expenses')
+  const { t, text } = useI18n()
+  useTitle(t('expenses.title'))
   const toast = useToast()
   const month = presetRange('month')
   const [expenses, setExpenses] = useState<ExpenseRecord[]>([])
@@ -69,7 +71,7 @@ export function ExpensesPage() {
         setServices(serviceData.services.slice(0, 100))
         setError('')
       })
-      .catch((caught) => setError(errorMessage(caught)))
+      .catch((caught) => setError(text(errorMessage(caught))))
       .finally(() => setLoading(false))
   }
 
@@ -84,10 +86,10 @@ export function ExpensesPage() {
 
   function validateForm() {
     const next: Record<string, string> = {}
-    if (!form.date) next.date = 'Enter the date.'
-    if (form.description.trim().length < 2) next.description = 'Enter a short description.'
-    if (parseMoneyToPence(form.amount) == null || parseMoneyToPence(form.amount) === 0) next.amount = 'Enter an amount greater than zero.'
-    if (form.reimbursable && !form.employeeId) next.employeeId = 'Choose the employee who should be reimbursed.'
+    if (!form.date) next.date = t('validation.expenseDate')
+    if (form.description.trim().length < 2) next.description = t('validation.description')
+    if (parseMoneyToPence(form.amount) == null || parseMoneyToPence(form.amount) === 0) next.amount = t('validation.amount')
+    if (form.reimbursable && !form.employeeId) next.employeeId = t('validation.reimburseEmployee')
     return next
   }
 
@@ -100,12 +102,13 @@ export function ExpensesPage() {
       const body = { ...form, employeeId: form.employeeId || null, serviceId: form.serviceId || null }
       if (editing) await api(`/api/expenses/${editing.id}`, { method: 'PUT', body })
       else await api('/api/expenses', { method: 'POST', body })
-      toast.success(editing ? 'Expense updated.' : 'Expense recorded successfully.')
+      toast.success(editing ? t('expenses.updated') : t('expenses.recorded'))
       setOpen(false)
       load()
     } catch (caught) {
-      setErrors(fieldErrors(caught))
-      toast.error(errorMessage(caught))
+      const details = fieldErrors(caught)
+      setErrors(Object.fromEntries(Object.entries(details).map(([key, value]) => [key, text(value)])))
+      toast.error(text(errorMessage(caught)))
     } finally {
       setBusy(false)
     }
@@ -116,11 +119,11 @@ export function ExpensesPage() {
     setBusy(true)
     try {
       await api(`/api/expenses/${removeTarget.id}`, { method: 'DELETE' })
-      toast.success('Expense deleted.')
+      toast.success(t('expenses.deleted'))
       setRemoveTarget(null)
       load()
     } catch (caught) {
-      toast.error(errorMessage(caught))
+      toast.error(text(errorMessage(caught)))
     } finally {
       setBusy(false)
     }
@@ -129,60 +132,60 @@ export function ExpensesPage() {
   return (
     <div>
       <PageHeader
-        title="Expenses"
-        subtitle="Cleaning products and other costs. If an employee paid personally, mark the expense as reimbursable."
-        action={<Button data-testid="add-expense" onClick={() => { setEditing(null); setForm(blank()); setErrors({}); setOpen(true) }}><Plus className="h-4 w-4" /> Add Expense</Button>}
+        title={t('expenses.title')}
+        subtitle={t('expenses.subtitle')}
+        action={<Button data-testid="add-expense" onClick={() => { setEditing(null); setForm(blank()); setErrors({}); setOpen(true) }}><Plus className="h-4 w-4" /> {t('expenses.add')}</Button>}
       />
       <p className="mb-4 rounded-xl bg-brand-soft px-4 py-3 text-sm leading-6 text-ink">
-        A cost entered on a service is listed here as well. Profit counts that cost once. Do not add the same cleaning products again as a separate expense.
+        {t('expenses.notice')}
       </p>
       <Card className="mb-4 grid gap-3 p-4 md:grid-cols-3 xl:grid-cols-5">
-        <label className="text-sm font-medium">From<input type="date" value={from} onChange={(event) => setFrom(event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-[#D0D5DD] px-3" /></label>
-        <label className="text-sm font-medium">To<input type="date" value={to} onChange={(event) => setTo(event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-[#D0D5DD] px-3" /></label>
-        <label className="text-sm font-medium">Category
+        <label className="text-sm font-medium">{t('common.from')}<input type="date" value={from} onChange={(event) => setFrom(event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-[#D0D5DD] px-3" /></label>
+        <label className="text-sm font-medium">{t('common.to')}<input type="date" value={to} onChange={(event) => setTo(event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-[#D0D5DD] px-3" /></label>
+        <label className="text-sm font-medium">{t('common.category')}
           <select value={category} onChange={(event) => setCategory(event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-[#D0D5DD] px-3">
-            <option value="">All categories</option>
-            {EXPENSE_CATEGORIES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+            <option value="">{t('expenses.allCategories')}</option>
+            {EXPENSE_CATEGORIES.map((item) => <option key={item.value} value={item.value}>{t(`categories.${item.value}`)}</option>)}
           </select>
         </label>
-        <label className="text-sm font-medium">Employee
+        <label className="text-sm font-medium">{t('common.employee')}
           <select value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-[#D0D5DD] px-3">
-            <option value="">All employees</option>
+            <option value="">{t('expenses.allEmployees')}</option>
             {employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.fullName}</option>)}
           </select>
         </label>
-        <label className="text-sm font-medium">Reimbursable
+        <label className="text-sm font-medium">{t('expenses.reimbursable')}
           <select value={reimbursable} onChange={(event) => setReimbursable(event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-[#D0D5DD] px-3">
-            <option value="">All</option>
-            <option value="true">Yes</option>
-            <option value="false">No</option>
+            <option value="">{t('common.all')}</option>
+            <option value="true">{t('common.yes')}</option>
+            <option value="false">{t('common.no')}</option>
           </select>
         </label>
-        <label className="text-sm font-medium md:col-span-2">Description
-          <TextInput className="mt-1" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search description" />
+        <label className="text-sm font-medium md:col-span-2">{t('common.description')}
+          <TextInput className="mt-1" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('expenses.search')} />
         </label>
       </Card>
       {error ? <ErrorBanner message={error} onRetry={load} /> : null}
-      {loading ? <LoadingState label="Loading expenses" /> : null}
-      {!loading && expenses.length === 0 ? <EmptyState title="No expenses recorded" body="Add cleaning products, travel, equipment or supplies when the company spends money." /> : null}
+      {loading ? <LoadingState label={t('expenses.loading')} /> : null}
+      {!loading && expenses.length === 0 ? <EmptyState title={t('expenses.emptyTitle')} body={t('expenses.emptyBody')} /> : null}
       {!loading && expenses.length > 0 ? (
         <>
-          <p className="mb-3 text-sm font-medium text-ink">Total shown {formatGBP(listedTotal)}</p>
+          <p className="mb-3 text-sm font-medium text-ink">{t('expenses.totalShown', { amount: formatGBP(listedTotal) })}</p>
           <div className="space-y-3 md:hidden">
             {expenses.map((expense) => (
               <Card key={expense.id} className="p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="font-semibold">{expense.description}</p>
-                    <p className="text-sm text-ink-muted">{formatDate(expense.date)} · {categoryLabel(expense.category)}</p>
-                    <p className="text-sm text-ink-muted">{expense.employeeName || 'No employee'}{expense.serviceLabel ? ` · ${expense.serviceLabel}` : ''}</p>
+                    <p className="text-sm text-ink-muted">{formatDate(expense.date)} · {categoryLabel(expense.category, t)}</p>
+                    <p className="text-sm text-ink-muted">{expense.employeeName || t('expenses.noEmployee')}{expense.serviceLabel ? ` · ${expense.serviceLabel}` : ''}</p>
                   </div>
                   <p className="font-semibold">{formatGBP(expense.amount)}</p>
                 </div>
-                <div className="mt-2"><Badge tone={statusTone(expense.settlement)}>{statusLabel(expense.settlement)}</Badge></div>
+                <div className="mt-2"><Badge tone={statusTone(expense.settlement)}>{statusLabel(expense.settlement, t)}</Badge></div>
                 <div className="mt-3 flex gap-2">
-                  <Button variant="secondary" onClick={() => openEdit(expense)}>Edit</Button>
-                  <Button variant="ghost" onClick={() => setRemoveTarget(expense)}>Delete</Button>
+                  <Button variant="secondary" onClick={() => openEdit(expense)}>{t('common.edit')}</Button>
+                  <Button variant="ghost" onClick={() => setRemoveTarget(expense)}>{t('common.delete')}</Button>
                 </div>
               </Card>
             ))}
@@ -191,22 +194,22 @@ export function ExpensesPage() {
             <div className="overflow-x-auto">
               <table className="min-w-[960px] w-full">
                 <thead className="border-b border-line bg-brand-soft">
-                  <tr>{['Date', 'Category', 'Description', 'Amount', 'Employee', 'Related service', 'Reimbursable', 'Status', 'Actions'].map((heading) => <th key={heading} className={thClass}>{heading}</th>)}</tr>
+                  <tr>{[t('common.date'), t('common.category'), t('common.description'), t('common.amount'), t('common.employee'), t('expenses.related'), t('expenses.reimbursable'), t('common.status'), t('common.actions')].map((heading) => <th key={heading} className={thClass}>{heading}</th>)}</tr>
                 </thead>
                 <tbody>
                   {expenses.map((expense) => (
                     <tr key={expense.id} className="border-b border-line last:border-0">
                       <td className={tdClass}>{formatDate(expense.date)}</td>
-                      <td className={tdClass}>{categoryLabel(expense.category)}</td>
+                      <td className={tdClass}>{categoryLabel(expense.category, t)}</td>
                       <td className={tdClass}>{expense.description}</td>
                       <td className={`${tdClass} font-medium`}>{formatGBP(expense.amount)}</td>
-                      <td className={tdClass}>{expense.employeeName || '—'}</td>
-                      <td className={tdClass}>{expense.serviceLabel || '—'}</td>
-                      <td className={tdClass}>{expense.reimbursable ? 'Yes' : 'No'}</td>
-                      <td className={tdClass}><Badge tone={statusTone(expense.settlement)}>{statusLabel(expense.settlement)}</Badge></td>
+                      <td className={tdClass}>{expense.employeeName || t('common.none')}</td>
+                      <td className={tdClass}>{expense.serviceLabel || t('common.none')}</td>
+                      <td className={tdClass}>{expense.reimbursable ? t('common.yes') : t('common.no')}</td>
+                      <td className={tdClass}><Badge tone={statusTone(expense.settlement)}>{statusLabel(expense.settlement, t)}</Badge></td>
                       <td className={tdClass}>
-                        <button type="button" className="rounded-lg p-2 text-ink-muted hover:bg-brand-soft" aria-label="Edit expense" onClick={() => openEdit(expense)}><Pencil className="h-4 w-4" /></button>
-                        <button type="button" className="rounded-lg p-2 text-ink-muted hover:bg-red-50 hover:text-danger" aria-label="Delete expense" onClick={() => setRemoveTarget(expense)}><Trash2 className="h-4 w-4" /></button>
+                        <button type="button" className="rounded-lg p-2 text-ink-muted hover:bg-brand-soft" aria-label={t('expenses.edit')} onClick={() => openEdit(expense)}><Pencil className="h-4 w-4" /></button>
+                        <button type="button" className="rounded-lg p-2 text-ink-muted hover:bg-red-50 hover:text-danger" aria-label={t('expenses.delete')} onClick={() => setRemoveTarget(expense)}><Trash2 className="h-4 w-4" /></button>
                       </td>
                     </tr>
                   ))}
@@ -217,50 +220,50 @@ export function ExpensesPage() {
         </>
       ) : null}
 
-      <Modal open={open} wide title={editing ? 'Edit expense' : 'Add expense'} onClose={() => !busy && setOpen(false)}>
+      <Modal open={open} wide title={editing ? t('expenses.editTitle') : t('expenses.addTitle')} onClose={() => !busy && setOpen(false)}>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Date" error={errors.date}><TextInput type="date" value={form.date} disabled={lockedAmount} onChange={(event) => setForm({ ...form, date: event.target.value })} /></Field>
-          <Field label="Category">
+          <Field label={t('common.date')} error={errors.date}><TextInput type="date" value={form.date} disabled={lockedAmount} onChange={(event) => setForm({ ...form, date: event.target.value })} /></Field>
+          <Field label={t('common.category')}>
             <SelectInput value={form.category} disabled={lockedAmount} onChange={(event) => setForm({ ...form, category: event.target.value })}>
-              {EXPENSE_CATEGORIES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+              {EXPENSE_CATEGORIES.map((item) => <option key={item.value} value={item.value}>{t(`categories.${item.value}`)}</option>)}
             </SelectInput>
           </Field>
           <div className="sm:col-span-2">
-            <Field label="Description" error={errors.description}><TextInput value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></Field>
+            <Field label={t('common.description')} error={errors.description}><TextInput value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></Field>
           </div>
-          <Field label="Amount" error={errors.amount} hint={lockedAmount ? 'This amount comes from the service. Edit the service to change it.' : undefined}>
+          <Field label={t('common.amount')} error={errors.amount} hint={lockedAmount ? t('expenses.lockedHint') : undefined}>
             <MoneyInput value={form.amount} disabled={lockedAmount} onChange={(amount) => setForm({ ...form, amount })} />
           </Field>
-          <Field label="Employee" error={errors.employeeId} hint="Required when the employee should be reimbursed.">
+          <Field label={t('common.employee')} error={errors.employeeId} hint={t('expenses.employeeHint')}>
             <SelectInput value={form.employeeId} onChange={(event) => setForm({ ...form, employeeId: event.target.value })}>
-              <option value="">No employee</option>
+              <option value="">{t('expenses.noEmployeeOption')}</option>
               {employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.fullName}</option>)}
             </SelectInput>
           </Field>
           <div className="sm:col-span-2">
-            <Field label="Related service" hint="Optional. Link an extra cost to a job. Do not re-enter products already saved on that service.">
+            <Field label={t('expenses.related')} hint={t('expenses.relatedHint')}>
               <SelectInput value={form.serviceId} disabled={lockedAmount} onChange={(event) => setForm({ ...form, serviceId: event.target.value })}>
-                <option value="">No related service</option>
+                <option value="">{t('expenses.noService')}</option>
                 {services.map((service) => <option key={service.id} value={service.id}>{formatDate(service.serviceDate)} — {service.propertyAddress}</option>)}
               </SelectInput>
             </Field>
           </div>
           <label className="flex items-start gap-3 text-sm sm:col-span-2">
             <input type="checkbox" className="mt-1 h-4 w-4" checked={form.reimbursable} onChange={(event) => setForm({ ...form, reimbursable: event.target.checked })} />
-            <span><span className="font-medium">Reimbursable</span><span className="mt-1 block text-ink-muted">Yes means the employee paid this amount and the company owes it back. The weekly payment will include it once.</span></span>
+            <span><span className="font-medium">{t('expenses.reimbursableLabel')}</span><span className="mt-1 block text-ink-muted">{t('expenses.reimbursableHint')}</span></span>
           </label>
-          <div className="sm:col-span-2"><Field label="Notes"><TextArea value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></Field></div>
+          <div className="sm:col-span-2"><Field label={t('common.notes')}><TextArea value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></Field></div>
         </div>
         <div className="mt-6 flex justify-end gap-2">
-          <Button variant="secondary" onClick={() => setOpen(false)} disabled={busy}>Cancel</Button>
-          <Button onClick={() => void save()} disabled={busy} data-testid="save-expense">{busy ? 'Saving…' : 'Save expense'}</Button>
+          <Button variant="secondary" onClick={() => setOpen(false)} disabled={busy}>{t('common.cancel')}</Button>
+          <Button onClick={() => void save()} disabled={busy} data-testid="save-expense">{busy ? t('common.saving') : t('expenses.save')}</Button>
         </div>
       </Modal>
       <ConfirmDialog
         open={Boolean(removeTarget)}
-        title="Delete expense"
-        message="Delete this expense? If it has already been reimbursed, it will be kept."
-        confirmLabel="Delete expense"
+        title={t('expenses.deleteTitle')}
+        message={t('expenses.deleteMessage')}
+        confirmLabel={t('expenses.delete')}
         tone="danger"
         busy={busy}
         onClose={() => setRemoveTarget(null)}

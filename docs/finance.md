@@ -49,7 +49,13 @@ An extra expense, such as travel, is entered on the Expenses page. If it is reim
 | Total revenue | Sum of service revenue in the dates you chose |
 | Employee payments | Work earnings only. Reimbursements are not included here |
 | Total expenses | Every expense whose date falls in the period, counted once |
+| Reimbursements | The part of those expenses that is owed back to employees. Already inside total expenses |
 | Net profit | Revenue − work earnings − expenses |
+| Outstanding payments | Everything still unpaid, including earlier weeks |
+| Jobs | Number of services in the selected dates |
+| Active employees | People who can be assigned now. Not limited by the date filter |
+
+Mark as Paid changes the record from pending to paid. It does not send money, connect to a bank, or use a card or payment service.
 
 Service income and work earnings use the service date. Expenses use the expense date. Costs typed on a service are given that service’s date.
 

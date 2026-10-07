@@ -110,6 +110,10 @@ async function main() {
   assert.equal(dashboard.body.kpis.employeePayments.amount, 11000)
   assert.equal(dashboard.body.kpis.expenses.amount, 2000)
   assert.equal(dashboard.body.kpis.profit.amount, 12000)
+  assert.equal(dashboard.body.kpis.reimbursements.amount, 2000)
+  assert.equal(dashboard.body.kpis.expenses.amount, dashboard.body.kpis.reimbursements.amount)
+  assert.equal(dashboard.body.counts.jobs, 1)
+  assert.equal(dashboard.body.counts.outstandingPayments, 13000)
   assert.equal(dashboard.body.pendingPayments[0].totalDue, 13000)
 
   const period = await agent.get('/api/payments/period').query({ from: '2026-09-28', to: '2026-10-04' })

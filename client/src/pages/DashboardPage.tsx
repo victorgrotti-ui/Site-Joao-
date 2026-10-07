@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Receipt, TrendingUp, Users, Wallet } from 'lucide-react'
+import { Briefcase, HandCoins, Receipt, TrendingUp, Users, Wallet, Clock3, UserCheck } from 'lucide-react'
 import { ChartCard, EmployeeBars, MoneyBars, ProfitBars, TypeDonut, seriesIsEmpty } from '../components/Charts'
 import { DateRangeControl, type DatePreset } from '../components/DateRangeControl'
 import { Badge, Card, EmptyState, ErrorBanner, LoadingState, PageHeader, statusLabel, statusTone, tdClass, thClass } from '../components/ui'
+import { useI18n } from '../i18n'
 import { api, errorMessage } from '../lib/api'
 import { presetRange } from '../lib/dates'
 import { formatDate, formatGBP, formatPercent } from '../lib/format'
@@ -13,15 +14,9 @@ import { useTitle } from '../lib/useTitle'
 
 const initial = presetRange('month')
 
-function changeText(kpi: Kpi) {
-  if (kpi.changePercent == null) {
-    return kpi.previous === 0 && kpi.amount !== 0 ? 'New this period' : 'No change from the previous period'
-  }
-  return `${formatPercent(kpi.changePercent)} vs previous period`
-}
-
 export function DashboardPage() {
-  useTitle('Dashboard')
+  const { t, text } = useI18n()
+  useTitle(t('dashboard.title'))
   const [preset, setPreset] = useState<DatePreset>('month')
   const [from, setFrom] = useState(initial.from)
   const [to, setTo] = useState(initial.to)
@@ -29,9 +24,16 @@ export function DashboardPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
 
+  function changeText(kpi: Kpi) {
+    if (kpi.changePercent == null) {
+      return kpi.previous === 0 && kpi.amount !== 0 ? t('dashboard.newPeriod') : t('dashboard.noChange')
+    }
+    return t('dashboard.vsPrevious', { percent: formatPercent(kpi.changePercent) })
+  }
+
   function load(nextFrom = from, nextTo = to) {
     if (!nextFrom || !nextTo || nextFrom > nextTo) {
-      setError('The start date must be on or before the end date.')
+      setError(t('dates.invalid'))
       setLoading(false)
       return
     }
@@ -41,27 +43,23 @@ export function DashboardPage() {
         setData(result)
         setError('')
       })
-      .catch((caught) => setError(errorMessage(caught)))
+      .catch((caught) => setError(text(errorMessage(caught))))
       .finally(() => setLoading(false))
   }
 
   useEffect(() => {
     load(from, to)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [from, to])
+  }, [from, to, t])
 
-  const cards = data
-    ? [
-        { label: 'Total revenue', value: data.kpis.revenue, icon: Wallet, hint: 'Money received for services' },
-        { label: 'Employee payments', value: data.kpis.employeePayments, icon: Users, hint: 'Work earnings, excluding reimbursements' },
-        { label: 'Total expenses', value: data.kpis.expenses, icon: Receipt, hint: 'Products, supplies and other costs' },
-        { label: 'Net profit', value: data.kpis.profit, icon: TrendingUp, hint: 'Revenue − work payments − expenses' },
-      ]
-    : []
+  const serviceTypes = data?.serviceTypes.map((slice) => ({
+    ...slice,
+    label: serviceTypeLabel(slice.key, t),
+  }))
 
   return (
     <div>
-      <PageHeader title="Dashboard" subtitle="Overview of your cleaning operations and finances." />
+      <PageHeader title={t('dashboard.title')} subtitle={t('dashboard.subtitle')} />
       <DateRangeControl
         preset={preset}
         from={from}
@@ -73,60 +71,91 @@ export function DashboardPage() {
         }}
       />
       {error ? <div className="mt-4"><ErrorBanner message={error} onRetry={() => load()} /></div> : null}
-      {loading && !data ? <LoadingState label="Loading dashboard" /> : null}
+      {loading && !data ? <LoadingState label={t('dashboard.loading')} /> : null}
       {data ? (
         <>
           <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {cards.map((card) => {
-              const profit = card.label === 'Net profit'
-              return (
-                <Card key={card.label} className="p-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">{card.label}</p>
-                    <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand-light text-brand">
-                      <card.icon className="h-5 w-5" aria-hidden="true" />
-                    </span>
-                  </div>
-                  <p className={`mt-3 text-2xl font-semibold tracking-tight ${profit && card.value.amount < 0 ? 'text-danger' : profit && card.value.amount > 0 ? 'text-success' : 'text-ink'}`}>
-                    {formatGBP(card.value.amount)}
-                  </p>
-                  <p className="mt-1 text-xs text-ink-muted">{changeText(card.value)}</p>
-                  <p className="mt-3 text-xs leading-5 text-ink-muted">{card.hint}</p>
-                </Card>
-              )
-            })}
+            {[
+              { label: t('dashboard.revenue'), value: formatGBP(data.kpis.revenue.amount), hint: t('dashboard.revenueHint'), change: changeText(data.kpis.revenue), icon: Wallet, tone: '' },
+              { label: t('dashboard.payments'), value: formatGBP(data.kpis.employeePayments.amount), hint: t('dashboard.paymentsHint'), change: changeText(data.kpis.employeePayments), icon: Users, tone: '' },
+              { label: t('dashboard.expenses'), value: formatGBP(data.kpis.expenses.amount), hint: t('dashboard.expensesHint'), change: changeText(data.kpis.expenses), icon: Receipt, tone: '' },
+              { label: t('dashboard.profit'), value: formatGBP(data.kpis.profit.amount), hint: t('dashboard.profitHint'), change: changeText(data.kpis.profit), icon: TrendingUp, tone: data.kpis.profit.amount < 0 ? 'text-danger' : data.kpis.profit.amount > 0 ? 'text-success' : 'text-ink' },
+            ].map((card) => (
+              <Card key={card.label} className="p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">{card.label}</p>
+                  <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand-light text-brand">
+                    <card.icon className="h-5 w-5" aria-hidden="true" />
+                  </span>
+                </div>
+                <p className={`mt-3 text-2xl font-semibold tracking-tight ${card.tone || 'text-ink'}`}>{card.value}</p>
+                <p className="mt-1 text-xs text-ink-muted">{card.change}</p>
+                <p className="mt-3 text-xs leading-5 text-ink-muted">{card.hint}</p>
+              </Card>
+            ))}
           </div>
-          <p className="mt-4 text-sm text-ink-muted">
-            Net profit = revenue − employee work payments − expenses. A reimbursement pays back an expense that is already included, so it is not deducted again.
-          </p>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <Card className="p-5">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">{t('dashboard.reimbursements')}</p>
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand-light text-brand"><HandCoins className="h-5 w-5" aria-hidden="true" /></span>
+              </div>
+              <p className="mt-3 text-2xl font-semibold tracking-tight">{formatGBP(data.kpis.reimbursements.amount)}</p>
+              <p className="mt-1 text-xs text-ink-muted">{changeText(data.kpis.reimbursements)}</p>
+              <p className="mt-3 text-xs leading-5 text-ink-muted">{t('dashboard.reimbursementsHint')}</p>
+            </Card>
+            <Card className="p-5">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">{t('dashboard.outstanding')}</p>
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-amber-50 text-amber-700"><Clock3 className="h-5 w-5" aria-hidden="true" /></span>
+              </div>
+              <p className="mt-3 text-2xl font-semibold tracking-tight">{formatGBP(data.counts.outstandingPayments)}</p>
+              <p className="mt-3 text-xs leading-5 text-ink-muted">{t('dashboard.outstandingHint')}</p>
+            </Card>
+            <Card className="p-5">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">{t('dashboard.jobs')}</p>
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand-light text-brand"><Briefcase className="h-5 w-5" aria-hidden="true" /></span>
+              </div>
+              <p className="mt-3 text-2xl font-semibold tracking-tight">{data.counts.jobs}</p>
+              <p className="mt-3 text-xs leading-5 text-ink-muted">{t('dashboard.jobsHint')}</p>
+            </Card>
+            <Card className="p-5">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">{t('dashboard.activeEmployees')}</p>
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand-light text-brand"><UserCheck className="h-5 w-5" aria-hidden="true" /></span>
+              </div>
+              <p className="mt-3 text-2xl font-semibold tracking-tight">{data.counts.activeEmployees}</p>
+              <p className="mt-3 text-xs leading-5 text-ink-muted">{t('dashboard.activeEmployeesHint')}</p>
+            </Card>
+          </div>
+          <p className="mt-4 text-sm leading-6 text-ink-muted">{t('dashboard.formula')}</p>
           <div className="mt-6 grid gap-4 xl:grid-cols-2">
-            <ChartCard title="Revenue, expenses and profit" subtitle="For the dates selected above." empty={seriesIsEmpty(data.series)}>
+            <ChartCard title={t('dashboard.chartCompare')} subtitle={t('dashboard.chartCompareHint')} empty={seriesIsEmpty(data.series)}>
               <MoneyBars data={data.series} />
             </ChartCard>
             <ChartCard
-              title="Profit by month"
-              subtitle="The six months up to the end of the selected range."
+              title={t('dashboard.chartProfit')}
+              subtitle={t('dashboard.chartProfitHint')}
               empty={data.monthlyProfit.every((point) => point.profit === 0 && point.revenue === 0 && point.expenses === 0)}
             >
               <ProfitBars data={data.monthlyProfit} />
             </ChartCard>
-            <ChartCard title="Services by employee" empty={data.servicesByEmployee.length === 0}>
+            <ChartCard title={t('dashboard.chartEmployees')} empty={data.servicesByEmployee.length === 0}>
               <EmployeeBars data={data.servicesByEmployee} />
             </ChartCard>
-            <ChartCard title="Service type distribution" empty={data.serviceTypes.length === 0}>
-              <TypeDonut data={data.serviceTypes} />
+            <ChartCard title={t('dashboard.chartTypes')} empty={(serviceTypes ?? []).length === 0}>
+              <TypeDonut data={serviceTypes ?? []} />
             </ChartCard>
           </div>
 
           <div className="mt-8 flex items-end justify-between gap-3">
-            <h2 className="text-lg font-semibold text-ink">Recent services</h2>
-            <Link to="/services" className="text-sm font-semibold text-brand">
-              View all services
-            </Link>
+            <h2 className="text-lg font-semibold text-ink">{t('dashboard.recent')}</h2>
+            <Link to="/services" className="text-sm font-semibold text-brand">{t('dashboard.viewAll')}</Link>
           </div>
           {data.recentServices.length === 0 ? (
             <div className="mt-3">
-              <EmptyState title="No services in this period" body="Add a cleaning service and it will appear here with its revenue, costs and profit." />
+              <EmptyState title={t('dashboard.emptyServicesTitle')} body={t('dashboard.emptyServicesBody')} />
             </div>
           ) : (
             <Card className="mt-3 overflow-hidden">
@@ -134,8 +163,8 @@ export function DashboardPage() {
                 <table className="min-w-[920px] w-full">
                   <thead className="border-b border-line bg-brand-soft">
                     <tr>
-                      {['Date', 'Property', 'Service type', 'Employee', 'Revenue', 'Employee payment', 'Expenses', 'Profit', 'Status'].map((heading) => (
-                        <th key={heading} className={thClass}>{heading}</th>
+                      {['date', 'property', 'type', 'employee', 'revenue', 'payment', 'expenses', 'profit', 'status'].map((heading) => (
+                        <th key={heading} className={thClass}>{t(`dashboard.columns.${heading}`)}</th>
                       ))}
                     </tr>
                   </thead>
@@ -144,13 +173,13 @@ export function DashboardPage() {
                       <tr key={service.id} className="border-b border-line last:border-0">
                         <td className={tdClass}>{formatDate(service.serviceDate)}</td>
                         <td className={tdClass}>{service.propertyAddress}</td>
-                        <td className={tdClass}>{serviceTypeLabel(service.serviceType)}</td>
+                        <td className={tdClass}>{serviceTypeLabel(service.serviceType, t)}</td>
                         <td className={tdClass}>{service.employeeName}</td>
                         <td className={tdClass}>{formatGBP(service.revenue)}</td>
                         <td className={tdClass}>{formatGBP(service.employeePayment)}</td>
                         <td className={tdClass}>{formatGBP(service.totalExpenses)}</td>
                         <td className={`${tdClass} font-semibold ${service.profit < 0 ? 'text-danger' : 'text-success'}`}>{formatGBP(service.profit)}</td>
-                        <td className={tdClass}><Badge tone={statusTone(service.paymentStatus)}>{statusLabel(service.paymentStatus)}</Badge></td>
+                        <td className={tdClass}><Badge tone={statusTone(service.paymentStatus)}>{statusLabel(service.paymentStatus, t)}</Badge></td>
                       </tr>
                     ))}
                   </tbody>
@@ -160,12 +189,12 @@ export function DashboardPage() {
           )}
 
           <div className="mt-8">
-            <h2 className="text-lg font-semibold text-ink">Pending employee payments</h2>
-            <p className="mt-1 text-sm text-ink-muted">All unpaid work and reimbursements, including earlier weeks, so a payment is not forgotten.</p>
+            <h2 className="text-lg font-semibold text-ink">{t('dashboard.pendingTitle')}</h2>
+            <p className="mt-1 text-sm text-ink-muted">{t('dashboard.pendingHint')}</p>
           </div>
           {data.pendingPayments.length === 0 ? (
             <div className="mt-3">
-              <EmptyState title="No pending payments" body="When a service or reimbursable expense is unpaid, the employee and the amount due will show here." />
+              <EmptyState title={t('dashboard.emptyPendingTitle')} body={t('dashboard.emptyPendingBody')} />
             </div>
           ) : (
             <Card className="mt-3 overflow-hidden">
@@ -173,8 +202,8 @@ export function DashboardPage() {
                 <table className="min-w-[760px] w-full">
                   <thead className="border-b border-line bg-brand-soft">
                     <tr>
-                      {['Employee', 'Services', 'Work earnings', 'Reimbursements', 'Total due', 'Status'].map((heading) => (
-                        <th key={heading} className={thClass}>{heading}</th>
+                      {['employee', 'services', 'earnings', 'reimbursements', 'due', 'status'].map((heading) => (
+                        <th key={heading} className={thClass}>{t(`dashboard.columns.${heading}`)}</th>
                       ))}
                     </tr>
                   </thead>
@@ -186,14 +215,14 @@ export function DashboardPage() {
                         <td className={tdClass}>{formatGBP(row.workEarnings)}</td>
                         <td className={tdClass}>{formatGBP(row.reimbursements)}</td>
                         <td className={`${tdClass} font-semibold`}>{formatGBP(row.totalDue)}</td>
-                        <td className={tdClass}><Badge tone="warning">Pending</Badge></td>
+                        <td className={tdClass}><Badge tone="warning">{t('status.PENDING')}</Badge></td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
               <div className="border-t border-line px-4 py-3">
-                <Link to="/payments" className="text-sm font-semibold text-brand">Open weekly payments</Link>
+                <Link to="/payments" className="text-sm font-semibold text-brand">{t('dashboard.openPayments')}</Link>
               </div>
             </Card>
           )}

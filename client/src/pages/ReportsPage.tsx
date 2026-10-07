@@ -4,6 +4,7 @@ import { ChartCard, EmployeeBars, MoneyBars, ProfitBars, TypeDonut, seriesIsEmpt
 import { DateRangeControl, type DatePreset } from '../components/DateRangeControl'
 import { Button, Card, EmptyState, ErrorBanner, LoadingState, PageHeader, tdClass, thClass } from '../components/ui'
 import { useToast } from '../context/ToastContext'
+import { useI18n } from '../i18n'
 import { downloadCsv, api, errorMessage } from '../lib/api'
 import { presetRange } from '../lib/dates'
 import { formatGBP } from '../lib/format'
@@ -14,7 +15,8 @@ import { useTitle } from '../lib/useTitle'
 const initial = presetRange('month')
 
 export function ReportsPage() {
-  useTitle('Reports')
+  const { t, text, locale } = useI18n()
+  useTitle(t('reports.title'))
   const toast = useToast()
   const [preset, setPreset] = useState<DatePreset>('month')
   const [from, setFrom] = useState(initial.from)
@@ -39,7 +41,7 @@ export function ReportsPage() {
 
   function load() {
     if (!from || !to || from > to) {
-      setError('The start date must be on or before the end date.')
+      setError(t('dates.invalid'))
       setLoading(false)
       return
     }
@@ -50,7 +52,7 @@ export function ReportsPage() {
         setEmployees(employeeData.employees)
         setError('')
       })
-      .catch((caught) => setError(errorMessage(caught)))
+      .catch((caught) => setError(text(errorMessage(caught))))
       .finally(() => setLoading(false))
   }
 
@@ -61,92 +63,97 @@ export function ReportsPage() {
 
   async function exportCsv() {
     try {
-      await downloadCsv(`/api/reports/export?${query().toString()}`, `cmh-report-${from}-to-${to}.csv`)
-      toast.success('Report exported.')
+      const params = query()
+      if (locale === 'pt-BR') params.set('lang', 'pt-BR')
+      await downloadCsv(`/api/reports/export?${params.toString()}`, `cmh-report-${from}-to-${to}.csv`)
+      toast.success(t('reports.exported'))
     } catch (caught) {
-      toast.error(errorMessage(caught))
+      toast.error(text(errorMessage(caught)))
     }
   }
 
   const summary = report
     ? [
-        ['Total revenue', formatGBP(report.summary.revenue)],
-        ['Total employee payments', formatGBP(report.summary.employeePayments)],
-        ['Total expenses', formatGBP(report.summary.expenses)],
-        ['Total profit', formatGBP(report.summary.profit)],
-        ['Number of services', String(report.summary.serviceCount)],
-        ['Average revenue per service', formatGBP(report.summary.averageRevenue)],
-        ['Average profit per service', formatGBP(report.summary.averageProfit)],
+        ['revenue', t('reports.revenue'), formatGBP(report.summary.revenue)],
+        ['payments', t('reports.payments'), formatGBP(report.summary.employeePayments)],
+        ['reimbursements', t('reports.reimbursements'), formatGBP(report.summary.reimbursements)],
+        ['expenses', t('reports.expenses'), formatGBP(report.summary.expenses)],
+        ['profit', t('reports.profit'), formatGBP(report.summary.profit)],
+        ['count', t('reports.count'), String(report.summary.serviceCount)],
+        ['averageRevenue', t('reports.averageRevenue'), formatGBP(report.summary.averageRevenue)],
+        ['averageProfit', t('reports.averageProfit'), formatGBP(report.summary.averageProfit)],
       ]
     : []
 
   return (
     <div>
       <PageHeader
-        title="Reports"
-        subtitle="Revenue, costs and profit for the dates and work you choose."
-        action={<Button onClick={() => void exportCsv()}><Download className="h-4 w-4" /> Export CSV</Button>}
+        title={t('reports.title')}
+        subtitle={t('reports.subtitle')}
+        action={<Button onClick={() => void exportCsv()}><Download className="h-4 w-4" /> {t('reports.export')}</Button>}
       />
       <DateRangeControl preset={preset} from={from} to={to} onChange={(next) => { setPreset(next.preset); setFrom(next.from); setTo(next.to) }} />
       <Card className="mt-4 grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-4">
-        <label className="text-sm font-medium">Employee
+        <label className="text-sm font-medium">{t('reports.employee')}
           <select value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-[#D0D5DD] px-3">
-            <option value="">All employees</option>
+            <option value="">{t('reports.allEmployees')}</option>
             {employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.fullName}</option>)}
           </select>
         </label>
-        <label className="text-sm font-medium">Service type
+        <label className="text-sm font-medium">{t('reports.serviceType')}
           <select value={serviceType} onChange={(event) => setServiceType(event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-[#D0D5DD] px-3">
-            <option value="">All types</option>
-            {SERVICE_TYPES.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}
+            <option value="">{t('reports.allTypes')}</option>
+            {SERVICE_TYPES.map((type) => <option key={type.value} value={type.value}>{t(`serviceTypes.${type.value}`)}</option>)}
           </select>
         </label>
-        <label className="text-sm font-medium">Contracting company
-          <input value={client} onChange={(event) => setClient(event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-[#D0D5DD] px-3" placeholder="Client name" />
+        <label className="text-sm font-medium">{t('reports.client')}
+          <input value={client} onChange={(event) => setClient(event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-[#D0D5DD] px-3" placeholder={t('reports.clientPlaceholder')} />
         </label>
-        <label className="text-sm font-medium">Payment status
+        <label className="text-sm font-medium">{t('reports.paymentStatus')}
           <select value={paymentStatus} onChange={(event) => setPaymentStatus(event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-[#D0D5DD] px-3">
-            <option value="">All</option>
-            <option value="PENDING">Pending</option>
-            <option value="PAID">Paid</option>
+            <option value="">{t('common.all')}</option>
+            <option value="PENDING">{t('status.PENDING')}</option>
+            <option value="PAID">{t('status.PAID')}</option>
           </select>
         </label>
       </Card>
       {error ? <div className="mt-4"><ErrorBanner message={error} onRetry={load} /></div> : null}
-      {loading && !report ? <LoadingState label="Loading report" /> : null}
+      {loading && !report ? <LoadingState label={t('reports.loading')} /> : null}
       {report ? (
         <>
           <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {summary.map(([label, value]) => (
-              <Card key={label} className="p-4">
+            {summary.map(([key, label, value]) => (
+              <Card key={key} className="p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">{label}</p>
-                <p className={`mt-2 text-xl font-semibold ${label === 'Total profit' && report.summary.profit < 0 ? 'text-danger' : 'text-ink'}`}>{value}</p>
+                <p className={`mt-2 text-xl font-semibold ${key === 'profit' && report.summary.profit < 0 ? 'text-danger' : 'text-ink'}`}>{value}</p>
               </Card>
             ))}
           </div>
           <div className="mt-6 grid gap-4 xl:grid-cols-2">
-            <ChartCard title="Revenue, expenses and profit" empty={seriesIsEmpty(report.series)}><MoneyBars data={report.series} /></ChartCard>
-            <ChartCard title="Profit" empty={seriesIsEmpty(report.series)}><ProfitBars data={report.series} /></ChartCard>
-            <ChartCard title="Profit by employee" empty={report.profitByEmployee.length === 0}>
-              <ProfitBars data={report.profitByEmployee.map((row) => ({ label: row.name, profit: row.profit }))} />
+            <ChartCard title={t('reports.chartCompare')} empty={seriesIsEmpty(report.series)}><MoneyBars data={report.series} /></ChartCard>
+            <ChartCard title={t('reports.chartProfit')} empty={seriesIsEmpty(report.series)}><ProfitBars data={report.series} /></ChartCard>
+            <ChartCard title={t('reports.chartByEmployee')} empty={report.profitByEmployee.length === 0}>
+              <ProfitBars data={report.profitByEmployee.map((row) => ({ label: row.employeeId === 'overhead' ? t('reports.overhead') : row.name, profit: row.profit }))} />
             </ChartCard>
-            <ChartCard title="Services by employee" empty={report.servicesByEmployee.length === 0}><EmployeeBars data={report.servicesByEmployee} /></ChartCard>
-            <ChartCard title="Services by type" empty={report.serviceTypes.length === 0}><TypeDonut data={report.serviceTypes} /></ChartCard>
+            <ChartCard title={t('reports.chartServices')} empty={report.servicesByEmployee.length === 0}><EmployeeBars data={report.servicesByEmployee} /></ChartCard>
+            <ChartCard title={t('reports.chartTypes')} empty={report.serviceTypes.length === 0}>
+              <TypeDonut data={report.serviceTypes.map((slice) => ({ ...slice, label: t(`serviceTypes.${slice.key}`) }))} />
+            </ChartCard>
           </div>
-          <h2 className="mb-3 mt-8 text-lg font-semibold">Profit by employee</h2>
+          <h2 className="mb-3 mt-8 text-lg font-semibold">{t('reports.tableTitle')}</h2>
           {report.profitByEmployee.length === 0 ? (
-            <EmptyState title="No results" body="Nothing in the database matches these filters." />
+            <EmptyState title={t('reports.emptyTitle')} body={t('reports.emptyBody')} />
           ) : (
             <Card className="overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="min-w-[760px] w-full">
                   <thead className="border-b border-line bg-brand-soft">
-                    <tr>{['Employee', 'Services', 'Revenue', 'Employee payments', 'Expenses', 'Profit'].map((heading) => <th key={heading} className={thClass}>{heading}</th>)}</tr>
+                    <tr>{[t('common.employee'), t('common.services'), t('common.revenue'), t('reports.payments'), t('common.expenses'), t('common.profit')].map((heading) => <th key={heading} className={thClass}>{heading}</th>)}</tr>
                   </thead>
                   <tbody>
                     {report.profitByEmployee.map((row) => (
                       <tr key={row.employeeId} className="border-b border-line last:border-0">
-                        <td className={tdClass}>{row.name}</td>
+                        <td className={tdClass}>{row.employeeId === 'overhead' ? t('reports.overhead') : row.name}</td>
                         <td className={tdClass}>{row.serviceCount}</td>
                         <td className={tdClass}>{formatGBP(row.revenue)}</td>
                         <td className={tdClass}>{formatGBP(row.employeePayments)}</td>

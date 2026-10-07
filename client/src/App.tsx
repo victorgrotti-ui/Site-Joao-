@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { Logo } from './components/Logo'
 import { useAuth } from './context/AuthContext'
+import { useI18n } from './i18n'
 import { DashboardPage } from './pages/DashboardPage'
 import { EmployeeProfilePage } from './pages/EmployeeProfilePage'
 import { EmployeesPage } from './pages/EmployeesPage'
@@ -15,13 +16,14 @@ import { SettingsPage } from './pages/SettingsPage'
 
 function RequireAuth() {
   const { user, loading } = useAuth()
+  const { t } = useI18n()
   if (loading) {
     return (
       <div className="grid min-h-screen place-items-center bg-canvas">
         <div className="text-center">
           <Logo className="mx-auto h-12 w-auto" />
           <p className="mt-4 text-sm text-ink-muted" role="status">
-            Loading CMH Cleaning…
+            {t('login.loading')}
           </p>
         </div>
       </div>

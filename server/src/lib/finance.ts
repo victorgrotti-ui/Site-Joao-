@@ -52,6 +52,7 @@ export interface Totals {
   revenue: number
   employeePayments: number
   expenses: number
+  reimbursements: number
   profit: number
   serviceCount: number
   averageRevenue: number
@@ -187,12 +188,14 @@ export function summarise(
   const employeePayments = sum(viewed.map((service) => service.employeePayment))
   const ledgerExpenses = sum(viewedExpenses.map((expense) => expense.amount))
   const expenseTotal = ledgerExpenses + embeddedShortfall(viewed, expenses)
+  const reimbursements = sum(viewedExpenses.filter((expense) => expense.reimbursable).map((expense) => expense.amount))
   const profit = revenue - employeePayments - expenseTotal
   const serviceCount = viewed.length
   return {
     revenue,
     employeePayments,
     expenses: expenseTotal,
+    reimbursements,
     profit,
     serviceCount,
     averageRevenue: serviceCount ? Math.round(revenue / serviceCount) : 0,

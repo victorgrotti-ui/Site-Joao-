@@ -136,6 +136,12 @@ npm start                # serves the built app from the API
 
 The calculation rules are written in [docs/finance.md](docs/finance.md). The layout of the code is in [docs/architecture.md](docs/architecture.md).
 
+## Language
+
+English is the default. Use the language menu in the header, on the sign-in page, or in Settings to switch to Português (Brasil). The choice is saved in this browser and stays after a refresh. Names, addresses and the amounts you type are not translated. Currency stays GBP (£).
+
+Mark as Paid only changes the record in this system. It does not send money or connect to a bank, card or payment service.
+
 ## Logo
 
 The sidebar, sign-in page and browser icon use:

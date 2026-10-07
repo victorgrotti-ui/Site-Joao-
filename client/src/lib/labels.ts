@@ -24,14 +24,22 @@ export const PAYMENT_DAYS = [
   { value: 'SUNDAY', label: 'Sunday' },
 ] as const
 
-export function serviceTypeLabel(value: string): string {
-  return SERVICE_TYPES.find((item) => item.value === value)?.label ?? value
+import type { Translate } from '../i18n/en'
+
+function labelled(group: string, value: string, t: Translate): string {
+  const key = `${group}.${value}`
+  const label = t(key)
+  return label === key ? value : label
 }
 
-export function categoryLabel(value: string): string {
-  return EXPENSE_CATEGORIES.find((item) => item.value === value)?.label ?? value
+export function serviceTypeLabel(value: string, t: Translate): string {
+  return labelled('serviceTypes', value, t)
 }
 
-export function paymentDayLabel(value: string): string {
-  return PAYMENT_DAYS.find((item) => item.value === value)?.label ?? value
+export function categoryLabel(value: string, t: Translate): string {
+  return labelled('categories', value, t)
+}
+
+export function paymentDayLabel(value: string, t: Translate): string {
+  return labelled('days', value, t)
 }

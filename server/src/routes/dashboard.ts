@@ -34,6 +34,9 @@ dashboardRouter.get(
       previous: previousAmount,
       changePercent: changePercent(amount, previousAmount),
     })
+    const pending = outstandingRows(books.services, books.expenses, books.employees)
+    const outstandingPayments = pending.reduce((total, row) => total + row.totalDue, 0)
+    const activeEmployees = await prisma.employee.count({ where: { status: 'ACTIVE' } })
 
     res.json({
       from: filters.from,
@@ -44,14 +47,21 @@ dashboardRouter.get(
         revenue: kpi(current.revenue, previous.revenue),
         employeePayments: kpi(current.employeePayments, previous.employeePayments),
         expenses: kpi(current.expenses, previous.expenses),
+        reimbursements: kpi(current.reimbursements, previous.reimbursements),
         profit: kpi(current.profit, previous.profit),
+      },
+      counts: {
+        jobs: current.serviceCount,
+        activeEmployees,
+        outstandingPayments,
+        outstandingEmployees: pending.length,
       },
       series: buildSeries(books.services, books.expenses, filters),
       monthlyProfit: monthlyTrend(books.services, books.expenses, filters.to),
       servicesByEmployee: servicesByEmployee(books.services, filters),
       serviceTypes: servicesByType(books.services, filters),
       recentServices: recent.map(serializeService),
-      pendingPayments: outstandingRows(books.services, books.expenses, books.employees).slice(0, 8),
+      pendingPayments: pending.slice(0, 8),
     })
   }),
 )

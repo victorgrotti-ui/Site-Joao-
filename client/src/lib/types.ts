@@ -112,7 +112,14 @@ export interface DashboardData {
     revenue: Kpi
     employeePayments: Kpi
     expenses: Kpi
+    reimbursements: Kpi
     profit: Kpi
+  }
+  counts: {
+    jobs: number
+    activeEmployees: number
+    outstandingPayments: number
+    outstandingEmployees: number
   }
   series: SeriesPoint[]
   monthlyProfit: Array<{ key: string; label: string; profit: number; revenue: number; expenses: number }>
@@ -135,6 +142,7 @@ export interface ReportData {
   summary: {
     revenue: number
     employeePayments: number
+    reimbursements: number
     expenses: number
     profit: number
     serviceCount: number

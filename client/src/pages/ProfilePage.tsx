@@ -2,11 +2,13 @@ import { useState } from 'react'
 import { Button, Card, Field, PageHeader, TextInput } from '../components/ui'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
+import { useI18n } from '../i18n'
 import { api, errorMessage, fieldErrors } from '../lib/api'
 import { useTitle } from '../lib/useTitle'
 
 export function ProfilePage() {
-  useTitle('Profile')
+  const { t, text } = useI18n()
+  useTitle(t('profile.title'))
   const { user, logout } = useAuth()
   const toast = useToast()
   const [currentPassword, setCurrentPassword] = useState('')
@@ -17,9 +19,9 @@ export function ProfilePage() {
 
   async function save() {
     const next: Record<string, string> = {}
-    if (!currentPassword) next.currentPassword = 'Enter your current password.'
-    if (newPassword.length < 8) next.newPassword = 'Use at least 8 characters.'
-    if (newPassword !== confirm) next.confirm = 'The new passwords do not match.'
+    if (!currentPassword) next.currentPassword = t('validation.currentPassword')
+    if (newPassword.length < 8) next.newPassword = t('validation.passwordLength')
+    if (newPassword !== confirm) next.confirm = t('validation.passwordMatch')
     setErrors(next)
     if (Object.keys(next).length) return
     setBusy(true)
@@ -28,10 +30,11 @@ export function ProfilePage() {
       setCurrentPassword('')
       setNewPassword('')
       setConfirm('')
-      toast.success('Password updated.')
+      toast.success(t('profile.updated'))
     } catch (caught) {
-      setErrors(fieldErrors(caught))
-      toast.error(errorMessage(caught))
+      const details = fieldErrors(caught)
+      setErrors(Object.fromEntries(Object.entries(details).map(([key, value]) => [key, text(value)])))
+      toast.error(text(errorMessage(caught)))
     } finally {
       setBusy(false)
     }
@@ -39,29 +42,29 @@ export function ProfilePage() {
 
   return (
     <div>
-      <PageHeader title="Profile" subtitle="Your sign-in details for this computer." />
+      <PageHeader title={t('profile.title')} subtitle={t('profile.subtitle')} />
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="p-5">
           <dl className="space-y-3 text-sm">
-            <div><dt className="text-ink-muted">Name</dt><dd className="text-base font-semibold text-ink">{user?.name}</dd></div>
-            <div><dt className="text-ink-muted">Email</dt><dd className="font-medium">{user?.email}</dd></div>
-            <div><dt className="text-ink-muted">Role</dt><dd className="font-medium">{user?.role === 'ADMIN' ? 'Administrator' : 'Manager'}</dd></div>
+            <div><dt className="text-ink-muted">{t('common.name')}</dt><dd className="text-base font-semibold text-ink">{user?.name}</dd></div>
+            <div><dt className="text-ink-muted">{t('common.email')}</dt><dd className="font-medium">{user?.email}</dd></div>
+            <div><dt className="text-ink-muted">{t('common.role')}</dt><dd className="font-medium">{user?.role === 'ADMIN' ? t('common.administrator') : t('common.manager')}</dd></div>
           </dl>
-          <Button className="mt-6" variant="secondary" onClick={() => void logout()}>Logout</Button>
+          <Button className="mt-6" variant="secondary" onClick={() => void logout()}>{t('nav.logout')}</Button>
         </Card>
         <Card className="p-5">
-          <h2 className="text-base font-semibold">Change password</h2>
+          <h2 className="text-base font-semibold">{t('profile.change')}</h2>
           <div className="mt-4 space-y-4">
-            <Field label="Current password" error={errors.currentPassword}>
+            <Field label={t('profile.current')} error={errors.currentPassword}>
               <TextInput type="password" autoComplete="current-password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} />
             </Field>
-            <Field label="New password" error={errors.newPassword}>
+            <Field label={t('profile.next')} error={errors.newPassword}>
               <TextInput type="password" autoComplete="new-password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} />
             </Field>
-            <Field label="Confirm new password" error={errors.confirm}>
+            <Field label={t('profile.confirm')} error={errors.confirm}>
               <TextInput type="password" autoComplete="new-password" value={confirm} onChange={(event) => setConfirm(event.target.value)} />
             </Field>
-            <Button onClick={() => void save()} disabled={busy}>{busy ? 'Saving…' : 'Update password'}</Button>
+            <Button onClick={() => void save()} disabled={busy}>{busy ? t('common.saving') : t('profile.update')}</Button>
           </div>
         </Card>
       </div>

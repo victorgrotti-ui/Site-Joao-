@@ -1,14 +1,9 @@
+import { useI18n } from '../i18n'
 import { presetRange } from '../lib/dates'
 
-const presets = [
-  ['today', 'Today'],
-  ['week', 'This Week'],
-  ['month', 'This Month'],
-  ['lastMonth', 'Last Month'],
-  ['custom', 'Custom Range'],
-] as const
+const presets = ['today', 'week', 'month', 'lastMonth', 'custom'] as const
 
-export type DatePreset = (typeof presets)[number][0]
+export type DatePreset = (typeof presets)[number]
 
 export function DateRangeControl({
   preset,
@@ -21,10 +16,11 @@ export function DateRangeControl({
   to: string
   onChange: (next: { preset: DatePreset; from: string; to: string }) => void
 }) {
+  const { t } = useI18n()
   return (
     <div className="space-y-3">
-      <div className="flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Date range">
-        {presets.map(([value, label]) => (
+      <div className="flex gap-2 overflow-x-auto pb-1" role="group" aria-label={t('dates.range')}>
+        {presets.map((value) => (
           <button
             key={value}
             type="button"
@@ -41,14 +37,14 @@ export function DateRangeControl({
               onChange({ preset: value, ...range })
             }}
           >
-            {label}
+            {t(`dates.${value}`)}
           </button>
         ))}
       </div>
       {preset === 'custom' ? (
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block text-sm font-medium text-ink">
-            From
+            {t('common.from')}
             <input
               type="date"
               value={from}
@@ -57,7 +53,7 @@ export function DateRangeControl({
             />
           </label>
           <label className="block text-sm font-medium text-ink">
-            To
+            {t('common.to')}
             <input
               type="date"
               value={to}

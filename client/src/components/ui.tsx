@@ -1,4 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react'
+import type { Translate } from '../i18n/en'
+import { useI18n } from '../i18n'
 
 const inputClass =
   'min-h-11 w-full rounded-lg border border-[#D0D5DD] bg-white px-3 text-sm text-ink outline-none transition placeholder:text-[#98A2B3] focus:border-brand focus:ring-2 focus:ring-brand/20'
@@ -102,17 +104,10 @@ export function statusTone(status: string): 'success' | 'warning' | 'neutral' | 
   return 'neutral'
 }
 
-export function statusLabel(status: string): string {
-  const labels: Record<string, string> = {
-    ACTIVE: 'Active',
-    INACTIVE: 'Inactive',
-    PAID: 'Paid',
-    PENDING: 'Pending',
-    REIMBURSED: 'Reimbursed',
-    OUTSTANDING: 'Outstanding',
-    NOT_REIMBURSABLE: 'Not reimbursable',
-  }
-  return labels[status] ?? status
+export function statusLabel(status: string, t: Translate): string {
+  const key = `status.${status}`
+  const label = t(key)
+  return label === key ? status : label
 }
 
 export function PageHeader({
@@ -153,12 +148,13 @@ export function LoadingState({ label = 'Loading' }: { label?: string }) {
 }
 
 export function ErrorBanner({ message, onRetry }: { message: string; onRetry?: () => void }) {
+  const { t } = useI18n()
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-danger sm:flex-row sm:items-center sm:justify-between">
       <p>{message}</p>
       {onRetry ? (
         <Button variant="secondary" onClick={onRetry}>
-          Try again
+          {t('common.tryAgain')}
         </Button>
       ) : null}
     </div>

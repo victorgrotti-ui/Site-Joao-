@@ -12,19 +12,20 @@ import {
   Wallet,
   X,
 } from 'lucide-react'
+import { LanguageSwitcher, useI18n } from '../i18n'
 import { api } from '../lib/api'
 import type { Settings as CompanySettings } from '../lib/types'
 import { useAuth } from '../context/AuthContext'
 import { Logo } from './Logo'
 
 const navigation = [
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/employees', label: 'Employees', icon: Users },
-  { to: '/services', label: 'Services', icon: Briefcase },
-  { to: '/expenses', label: 'Expenses', icon: Receipt },
-  { to: '/payments', label: 'Payments', icon: Wallet },
-  { to: '/reports', label: 'Reports', icon: BarChart3 },
-  { to: '/settings', label: 'Settings', icon: Settings },
+  { to: '/dashboard', label: 'nav.dashboard', icon: LayoutDashboard },
+  { to: '/employees', label: 'nav.employees', icon: Users },
+  { to: '/services', label: 'nav.services', icon: Briefcase },
+  { to: '/expenses', label: 'nav.expenses', icon: Receipt },
+  { to: '/payments', label: 'nav.payments', icon: Wallet },
+  { to: '/reports', label: 'nav.reports', icon: BarChart3 },
+  { to: '/settings', label: 'nav.settings', icon: Settings },
 ]
 
 function navClass(active: boolean) {
@@ -34,6 +35,7 @@ function navClass(active: boolean) {
 }
 
 export function Layout() {
+  const { t } = useI18n()
   const { user, logout } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
@@ -65,11 +67,11 @@ export function Layout() {
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between px-4 py-5">
         <Logo className="h-11 w-auto" />
-        <button type="button" className="rounded-lg p-2 text-ink md:hidden" aria-label="Close menu" onClick={() => setOpen(false)}>
+        <button type="button" className="rounded-lg p-2 text-ink md:hidden" aria-label={t('common.closeMenu')} onClick={() => setOpen(false)}>
           <X className="h-5 w-5" />
         </button>
       </div>
-      <nav className="flex-1 space-y-1 px-3" aria-label="Main">
+      <nav className="flex-1 space-y-1 px-3" aria-label={t('nav.main')}>
         {navigation.map((item) => (
           <NavLink
             key={item.to}
@@ -77,7 +79,7 @@ export function Layout() {
             className={({ isActive }) => navClass(isActive)}
           >
             <item.icon className="h-5 w-5" aria-hidden="true" />
-            {item.label}
+            {t(item.label)}
           </NavLink>
         ))}
       </nav>
@@ -101,7 +103,7 @@ export function Layout() {
           onClick={() => void logout()}
         >
           <LogOut className="h-5 w-5" aria-hidden="true" />
-          Logout
+          {t('nav.logout')}
         </button>
       </div>
     </div>
@@ -110,16 +112,16 @@ export function Layout() {
   return (
     <div className="min-h-screen bg-canvas">
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-white focus:px-3 focus:py-2">
-        Skip to content
+        {t('common.skip')}
       </a>
-      {open ? <button type="button" className="fixed inset-0 z-30 bg-[#172033]/40 md:hidden" aria-label="Close menu" onClick={() => setOpen(false)} /> : null}
+      {open ? <button type="button" className="fixed inset-0 z-30 bg-[#172033]/40 md:hidden" aria-label={t('common.closeMenu')} onClick={() => setOpen(false)} /> : null}
       <aside className={`fixed inset-y-0 left-0 z-40 w-[17.5rem] border-r border-line bg-white transition-transform md:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}>
         {sidebar}
       </aside>
       <div className="md:pl-[17.5rem]">
         <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-line bg-white/95 px-4 backdrop-blur sm:px-6">
           <div className="flex items-center gap-3">
-            <button type="button" className="rounded-lg p-2 text-ink md:hidden" aria-label="Open menu" onClick={() => setOpen(true)}>
+            <button type="button" className="rounded-lg p-2 text-ink md:hidden" aria-label={t('common.openMenu')} onClick={() => setOpen(true)}>
               <Menu className="h-5 w-5" />
             </button>
             <div className="md:hidden">
@@ -127,7 +129,9 @@ export function Layout() {
             </div>
             <p className="hidden text-sm font-semibold text-ink md:block">{company}</p>
           </div>
-          <div className="relative">
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher />
+            <div className="relative">
             <button
               type="button"
               className="flex min-h-11 items-center gap-2 rounded-lg px-2 text-sm font-semibold text-ink hover:bg-brand-soft"
@@ -138,18 +142,19 @@ export function Layout() {
               <span className="grid h-8 w-8 place-items-center rounded-full bg-brand text-xs font-bold text-white">
                 {user?.name.slice(0, 1).toUpperCase()}
               </span>
-              <span className="hidden sm:inline">Profile</span>
+              <span className="hidden sm:inline">{t('nav.profile')}</span>
             </button>
             {menu ? (
               <div role="menu" className="absolute right-0 mt-2 w-52 rounded-xl border border-line bg-white p-1 shadow-card">
                 <button type="button" role="menuitem" className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-brand-soft" onClick={() => navigate('/profile')}>
-                  Profile
+                  {t('nav.profile')}
                 </button>
                 <button type="button" role="menuitem" className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-brand-soft" onClick={() => void logout()}>
-                  Logout
+                  {t('nav.logout')}
                 </button>
               </div>
             ) : null}
+            </div>
           </div>
         </header>
         <main id="main" className="px-4 py-6 sm:px-6 lg:px-8">

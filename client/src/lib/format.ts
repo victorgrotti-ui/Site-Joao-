@@ -1,12 +1,30 @@
+let activeLocale = 'en-GB'
+
+export function setFormatLocale(locale: 'en' | 'pt-BR') {
+  activeLocale = locale === 'pt-BR' ? 'pt-BR' : 'en-GB'
+}
+
 export function formatGBP(pence: number): string {
-  return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(pence / 100)
+  return new Intl.NumberFormat(activeLocale, { style: 'currency', currency: 'GBP' }).format(pence / 100)
 }
 
 export function formatDate(iso: string): string {
   const [year, month, day] = iso.split('-').map(Number)
-  return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(
+  return new Intl.DateTimeFormat(activeLocale, { day: 'numeric', month: 'short', year: 'numeric' }).format(
     new Date(year, month - 1, day),
   )
+}
+
+export function formatChartKey(key: string | undefined, fallback: string): string {
+  if (key && /^\d{4}-\d{2}-\d{2}$/.test(key)) {
+    const [year, month, day] = key.split('-').map(Number)
+    return new Intl.DateTimeFormat(activeLocale, { day: 'numeric', month: 'short' }).format(new Date(year, month - 1, day))
+  }
+  if (key && /^\d{4}-\d{2}$/.test(key)) {
+    const [year, month] = key.split('-').map(Number)
+    return new Intl.DateTimeFormat(activeLocale, { month: 'short', year: 'numeric' }).format(new Date(year, month - 1, 1))
+  }
+  return fallback
 }
 
 export function formatDateRange(from: string, to: string): string {

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { formatGBP } from '../lib/format'
+import { useI18n } from '../i18n'
+import { formatChartKey, formatGBP } from '../lib/format'
 import type { NamedSlice, SeriesPoint } from '../lib/types'
 
 const TYPE_COLOURS = ['#0B63D6', '#1677E8', '#60A5FA', '#172033', '#93C5FD']
@@ -27,6 +28,7 @@ export function ChartCard({
   empty?: boolean
   children: ReactNode
 }) {
+  const { t } = useI18n()
   return (
     <section className="rounded-2xl border border-line bg-white p-4 shadow-card sm:p-5">
       <h2 className="text-base font-semibold text-ink">{title}</h2>
@@ -35,8 +37,8 @@ export function ChartCard({
         {empty ? (
           <div className="flex h-full items-center justify-center rounded-xl bg-brand-soft px-6 text-center">
             <div>
-              <p className="font-semibold text-ink">No financial data for this period</p>
-              <p className="mt-1 text-sm text-ink-muted">Charts use the records saved in your database.</p>
+              <p className="font-semibold text-ink">{t('charts.emptyTitle')}</p>
+              <p className="mt-1 text-sm text-ink-muted">{t('charts.emptyBody')}</p>
             </div>
           </div>
         ) : (
@@ -52,37 +54,42 @@ export function seriesIsEmpty(series: SeriesPoint[]) {
 }
 
 export function MoneyBars({ data }: { data: SeriesPoint[] }) {
+  const { t } = useI18n()
+  const rows = data.map((point) => ({ ...point, label: formatChartKey(point.key, point.label) }))
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={data} barGap={4}>
+      <BarChart data={rows} barGap={4}>
         <CartesianGrid vertical={false} stroke="#E6EAF0" />
         <XAxis dataKey="label" tick={{ fill: '#667085', fontSize: 12 }} axisLine={false} tickLine={false} />
         <YAxis tickFormatter={poundsTick} tick={{ fill: '#667085', fontSize: 12 }} axisLine={false} tickLine={false} width={56} />
         <Tooltip formatter={tooltipValue} cursor={{ fill: '#F5F9FF' }} />
         <Legend />
-        <Bar dataKey="revenue" name="Revenue" fill="#0B63D6" radius={[6, 6, 0, 0]} maxBarSize={28} />
-        <Bar dataKey="expenses" name="Expenses" fill="#F59E0B" radius={[6, 6, 0, 0]} maxBarSize={28} />
-        <Bar dataKey="profit" name="Profit" fill="#16A34A" radius={[6, 6, 0, 0]} maxBarSize={28} />
+        <Bar dataKey="revenue" name={t('charts.revenue')} fill="#0B63D6" radius={[6, 6, 0, 0]} maxBarSize={28} />
+        <Bar dataKey="expenses" name={t('charts.expenses')} fill="#F59E0B" radius={[6, 6, 0, 0]} maxBarSize={28} />
+        <Bar dataKey="profit" name={t('charts.profit')} fill="#16A34A" radius={[6, 6, 0, 0]} maxBarSize={28} />
       </BarChart>
     </ResponsiveContainer>
   )
 }
 
-export function ProfitBars({ data }: { data: Array<{ label: string; profit: number }> }) {
+export function ProfitBars({ data }: { data: Array<{ key?: string; label: string; profit: number }> }) {
+  const { t } = useI18n()
+  const rows = data.map((point) => ({ ...point, label: formatChartKey(point.key, point.label) }))
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={data}>
+      <BarChart data={rows}>
         <CartesianGrid vertical={false} stroke="#E6EAF0" />
         <XAxis dataKey="label" tick={{ fill: '#667085', fontSize: 12 }} axisLine={false} tickLine={false} />
         <YAxis tickFormatter={poundsTick} tick={{ fill: '#667085', fontSize: 12 }} axisLine={false} tickLine={false} width={56} />
         <Tooltip formatter={tooltipValue} cursor={{ fill: '#F5F9FF' }} />
-        <Bar dataKey="profit" name="Profit" fill="#0B63D6" radius={[6, 6, 0, 0]} maxBarSize={36} />
+        <Bar dataKey="profit" name={t('charts.profit')} fill="#0B63D6" radius={[6, 6, 0, 0]} maxBarSize={36} />
       </BarChart>
     </ResponsiveContainer>
   )
 }
 
 export function EmployeeBars({ data }: { data: NamedSlice[] }) {
+  const { t } = useI18n()
   const rows = data.map((item) => ({
     ...item,
     short: item.label.length > 16 ? `${item.label.slice(0, 15)}…` : item.label,
@@ -92,8 +99,8 @@ export function EmployeeBars({ data }: { data: NamedSlice[] }) {
       <BarChart data={rows} layout="vertical" margin={{ left: 8, right: 8 }}>
         <XAxis type="number" hide />
         <YAxis type="category" dataKey="short" width={108} tick={{ fill: '#172033', fontSize: 12 }} axisLine={false} tickLine={false} />
-        <Tooltip formatter={(value) => [String(Array.isArray(value) ? value[0] : value ?? 0), 'Services']} />
-        <Bar dataKey="count" name="Services" fill="#1677E8" radius={[0, 6, 6, 0]} maxBarSize={22} />
+        <Tooltip formatter={(value) => [String(Array.isArray(value) ? value[0] : value ?? 0), t('charts.services')]} />
+        <Bar dataKey="count" name={t('charts.services')} fill="#1677E8" radius={[0, 6, 6, 0]} maxBarSize={22} />
       </BarChart>
     </ResponsiveContainer>
   )
