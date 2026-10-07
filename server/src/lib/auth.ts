@@ -37,8 +37,18 @@ export function cookieOptions() {
   return {
     httpOnly: true,
     sameSite: 'lax' as const,
-    secure: process.env.NODE_ENV === 'production',
+    secure: process.env.COOKIE_SECURE === 'true',
     path: '/',
     maxAge: 7 * 24 * 60 * 60 * 1000,
+  }
+}
+
+export function clearCookieOptions() {
+  const options = cookieOptions()
+  return {
+    httpOnly: options.httpOnly,
+    sameSite: options.sameSite,
+    secure: options.secure,
+    path: options.path,
   }
 }

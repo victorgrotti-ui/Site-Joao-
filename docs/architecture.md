@@ -10,7 +10,9 @@ public/     Logo used by the Vite app
 docs/       Finance rules and this note
 ```
 
-The browser talks only to `/api`. In development, Vite proxies that path to the Express server and the login cookie stays on `localhost:5173`. After `npm run build`, Express can serve the built client itself.
+The browser talks only to `/api`. It never opens the database file. In development, Vite proxies that path to the Express server. After `npm run build`, `npm start` serves the built client and the API from one process on port 3001. That process is the single source of truth: other devices on the private network open its address, and they do not run their own database.
+
+The office server listens on all network interfaces unless `HOST` is set. The sign-in cookie is `httpOnly`. It is marked secure only when `COOKIE_SECURE=true`, so a normal internal `http://` address can still sign in. Do not publish the port on the public internet.
 
 ## Data
 
@@ -27,7 +29,7 @@ Identifiers are CUIDs. Money is an integer number of pence. Foreign keys use `ON
 
 ## API
 
-Authenticated routes use an httpOnly cookie named `cmh_session`. The token is a JWT signed with `JWT_SECRET`.
+Authenticated routes use an httpOnly cookie named `cmh_session`. The token is a JWT signed with `JWT_SECRET` and expires after 7 days. Failed sign-in attempts are limited. Successful sign-ins are not. The API checks the cookie on every company-data route, so opening an API address without signing in returns 401.
 
 | Area | Routes |
 | --- | --- |

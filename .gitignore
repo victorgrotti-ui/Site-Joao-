@@ -17,5 +17,6 @@ prisma/*.db-journal
 prisma/*.db-shm
 prisma/*.db-wal
 coverage/
+backups/
 .vite/
 *.tsbuildinfo

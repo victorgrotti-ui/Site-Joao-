@@ -19,7 +19,7 @@ import './types'
 export function createApp() {
   const app = express()
   app.disable('x-powered-by')
-  app.use(helmet({ contentSecurityPolicy: false }))
+  app.use(helmet({ contentSecurityPolicy: false, strictTransportSecurity: false }))
   app.use(
     cors({
       origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173',

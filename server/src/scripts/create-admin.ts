@@ -70,7 +70,7 @@ async function main() {
     },
   })
   console.log(`\nAdministrator created for ${email}.`)
-  console.log('Start the app with npm run dev and sign in at http://localhost:5173')
+  console.log('Start the office server with npm run build && npm start, then sign in at the address it prints.')
 }
 
 main()
