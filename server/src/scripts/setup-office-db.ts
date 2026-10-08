@@ -2,6 +2,7 @@ import { execFileSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 import { isDevelopmentDatabaseFile, sqliteFilePath } from '../lib/database-file'
+import { officeDatabaseCommands } from '../lib/office-setup'
 import { prisma } from '../lib/prisma'
 
 function targetsDevelopmentDatabase(file: string): boolean {
@@ -13,13 +14,15 @@ function targetsDevelopmentDatabase(file: string): boolean {
   }
 }
 
-function run(script: string) {
+function prepareDatabase() {
   const root = path.resolve(__dirname, '../../..')
-  execFileSync('npm', ['run', script], {
-    cwd: root,
-    stdio: 'inherit',
-    env: process.env,
-  })
+  for (const step of officeDatabaseCommands(root)) {
+    execFileSync(step.command, step.args, {
+      cwd: root,
+      stdio: 'inherit',
+      env: process.env,
+    })
+  }
 }
 
 async function main() {
@@ -39,8 +42,7 @@ async function main() {
 
   console.log(`Preparing an empty company database at ${file}`)
   console.log('Nothing is copied from prisma/dev.db.')
-  run('db:deploy')
-  run('db:seed')
+  prepareDatabase()
 
   const [users, employees, services, expenses, payments, settings] = await Promise.all([
     prisma.user.count(),
