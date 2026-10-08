@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import { en, type Translate } from './en'
 import { pt } from './pt'
 import { setFormatLocale } from '../lib/format'
@@ -123,20 +123,100 @@ export function useI18n() {
   return context
 }
 
+const languageOptions: Locale[] = ['en', 'pt-BR']
+
+function Flag({ locale }: { locale: Locale }) {
+  const rawId = useId()
+  const clipId = `flag-${rawId.replace(/:/g, '')}`
+  const brazil = locale === 'pt-BR'
+  return (
+    <svg viewBox="0 0 60 40" className="h-4 w-6 shrink-0 rounded-[3px] ring-1 ring-black/15" aria-hidden="true">
+      {brazil ? (
+        <>
+          <rect width="60" height="40" fill="#009B3A" />
+          <polygon points="30,5 55,20 30,35 5,20" fill="#FEDD00" />
+          <circle cx="30" cy="20" r="8" fill="#002776" />
+          <path d="M23 22c3.2-2.4 10.6-2.4 14 0" fill="none" stroke="#FFFFFF" strokeWidth="1.6" />
+        </>
+      ) : (
+        <g clipPath={`url(#${clipId})`}>
+          <clipPath id={clipId}>
+            <rect width="60" height="40" />
+          </clipPath>
+          <rect width="60" height="40" fill="#012169" />
+          <path d="M0 0 L60 40 M60 0 L0 40" stroke="#FFFFFF" strokeWidth="10" />
+          <path d="M0 0 L60 40 M60 0 L0 40" stroke="#C8102E" strokeWidth="6" />
+          <path d="M30 0 V40 M0 20 H60" stroke="#FFFFFF" strokeWidth="16" />
+          <path d="M30 0 V40 M0 20 H60" stroke="#C8102E" strokeWidth="9" />
+        </g>
+      )}
+    </svg>
+  )
+}
+
 export function LanguageSwitcher({ className = '' }: { className?: string }) {
   const { locale, setLocale, t } = useI18n()
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const labelFor = (option: Locale) => (option === 'pt-BR' ? t('language.portuguese') : t('language.english'))
+
+  useEffect(() => {
+    if (!open) return
+    const onPointer = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
+    }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('pointerdown', onPointer)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('pointerdown', onPointer)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
   return (
-    <label className={`inline-flex items-center ${className}`}>
-      <span className="sr-only">{t('language.label')}</span>
-      <select
+    <div ref={rootRef} className={`relative inline-flex max-w-full ${className}`}>
+      <button
+        type="button"
         aria-label={t('language.label')}
-        value={locale}
-        onChange={(event) => setLocale(event.target.value as Locale)}
-        className={`min-h-11 max-w-[46vw] rounded-lg border border-[#D0D5DD] bg-white px-2 text-sm font-semibold text-ink sm:max-w-none sm:px-3 ${className}`}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+        className="inline-flex min-h-11 max-w-full items-center gap-2 rounded-lg border border-[#D0D5DD] bg-white px-2.5 text-sm font-semibold text-ink"
       >
-        <option value="en">🇬🇧 {t('language.english')}</option>
-        <option value="pt-BR">🇧🇷 {t('language.portuguese')}</option>
-      </select>
-    </label>
+        <Flag locale={locale} />
+        <span className="truncate">{labelFor(locale)}</span>
+      </button>
+      {open ? (
+        <ul
+          role="listbox"
+          aria-label={t('language.label')}
+          className="absolute right-0 top-full z-50 mt-1 min-w-full w-max rounded-lg border border-[#D0D5DD] bg-white p-1 shadow-card"
+        >
+          {languageOptions.map((option) => {
+            const selected = option === locale
+            return (
+              <li key={option} role="option" aria-selected={selected}>
+                <button
+                  type="button"
+                  className={`flex min-h-11 w-full items-center gap-2 rounded-md px-2.5 text-left text-sm font-semibold ${
+                    selected ? 'bg-brand-light text-brand' : 'text-ink hover:bg-brand-soft'
+                  }`}
+                  onClick={() => {
+                    setLocale(option)
+                    setOpen(false)
+                  }}
+                >
+                  <Flag locale={option} />
+                  <span>{labelFor(option)}</span>
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      ) : null}
+    </div>
   )
 }
