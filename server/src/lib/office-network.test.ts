@@ -5,7 +5,9 @@ import {
   buildMdnsResponse,
   friendlyNameQuery,
   isPrivateLanAddress,
+  listenTargets,
   officeListenAddresses,
+  publicBindRequested,
 } from './office-network'
 
 describe('office network', () => {
@@ -24,6 +26,16 @@ describe('office network', () => {
     assert.deepEqual(officeListenAddresses('', ['192.168.1.20', '8.8.8.8']), ['127.0.0.1', '192.168.1.20'])
     assert.deepEqual(officeListenAddresses('0.0.0.0', ['8.8.8.8']), ['127.0.0.1'])
     assert.deepEqual(officeListenAddresses('127.0.0.1', ['192.168.1.20']), ['127.0.0.1'])
+  })
+
+  it('binds every interface only for a temporary public host', () => {
+    assert.equal(publicBindRequested({}), false)
+    assert.equal(publicBindRequested({ CMH_BIND: '127.0.0.1' }), false)
+    assert.equal(publicBindRequested({ RENDER: 'false' }), false)
+    assert.equal(publicBindRequested({ CMH_BIND: '0.0.0.0' }), true)
+    assert.equal(publicBindRequested({ RENDER: 'true' }), true)
+    assert.deepEqual(listenTargets('0.0.0.0', ['192.168.1.20', '8.8.8.8'], false), ['127.0.0.1', '192.168.1.20'])
+    assert.deepEqual(listenTargets('0.0.0.0', ['8.8.8.8'], true), ['0.0.0.0'])
   })
 
   it('answers a lookup for the friendly office name with the private address', () => {
