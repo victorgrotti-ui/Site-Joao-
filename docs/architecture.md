@@ -20,7 +20,7 @@ The sign-in cookie is `httpOnly`. It is marked secure only when `COOKIE_SECURE=t
 
 Prisma models:
 
-- `User` — administrator sign-in. Passwords are bcrypt hashes. Role is `ADMIN` today and `MANAGER` is reserved.
+- `User` — a login account. Roles are `ADMIN` and `MANAGER`. Passwords are bcrypt hashes. `active` turns sign-in off without deleting history. `tokenVersion` invalidates older sessions after a password change. Cleaning employees stay in `Employee` and cannot sign in.
 - `Employee` — team members. Disabling an employee keeps their history.
 - `Service` — one cleaning job, including revenue and the employee’s work payment.
 - `Expense` — the cost ledger. Rows created from a service are marked `SERVICE_PRODUCTS` or `SERVICE_OTHER`. Anything typed on the Expenses page is `MANUAL`.
@@ -36,6 +36,7 @@ Authenticated routes use an httpOnly cookie named `cmh_session`. The token is a 
 | Area | Routes |
 | --- | --- |
 | Auth | `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`, `POST /api/auth/change-password` |
+| Users | `GET/POST /api/users`, `POST /api/users/:id/reset-password`, `POST /api/users/:id/active`, `POST /api/users/:id/role` (administrators only) |
 | Employees | `GET/POST /api/employees`, `GET/PUT/DELETE /api/employees/:id` |
 | Services | `GET/POST /api/services`, `GET/PUT/DELETE /api/services/:id` |
 | Expenses | `GET/POST /api/expenses`, `GET/PUT/DELETE /api/expenses/:id` |

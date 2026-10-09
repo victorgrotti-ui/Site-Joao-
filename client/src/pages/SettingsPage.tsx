@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
+import { PasswordForm } from '../components/PasswordForm'
+import { UsersSection } from '../components/UsersSection'
 import { LanguageSwitcher, useI18n } from '../i18n'
 import { Button, Card, ErrorBanner, Field, LoadingState, PageHeader, SelectInput, TextArea, TextInput } from '../components/ui'
+import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { api, errorMessage, fieldErrors } from '../lib/api'
 import { PAYMENT_DAYS } from '../lib/labels'
@@ -10,6 +13,7 @@ import { useTitle } from '../lib/useTitle'
 export function SettingsPage() {
   const { t, text } = useI18n()
   useTitle(t('settings.title'))
+  const { user } = useAuth()
   const toast = useToast()
   const [form, setForm] = useState({ companyName: '', phone: '', email: '', address: '', defaultPaymentDay: 'SATURDAY' })
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -99,6 +103,33 @@ export function SettingsPage() {
           <Button onClick={() => void save()} disabled={busy}>{busy ? t('common.saving') : t('settings.save')}</Button>
         </div>
       </Card>
+      <Card className="mt-4 max-w-2xl p-5 sm:p-6">
+        <h2 className="text-base font-semibold text-ink" data-testid="settings-account">{t('settings.accountTitle')}</h2>
+        <p className="mt-1 text-sm leading-6 text-ink-muted">{t('settings.accountHint')}</p>
+        <dl className="mt-4 space-y-2 text-sm">
+          <div>
+            <dt className="text-ink-muted">{t('common.name')}</dt>
+            <dd className="font-semibold text-ink">{user?.name}</dd>
+          </div>
+          <div>
+            <dt className="text-ink-muted">{t('common.email')}</dt>
+            <dd className="font-medium">{user?.email}</dd>
+          </div>
+          <div>
+            <dt className="text-ink-muted">{t('common.role')}</dt>
+            <dd className="font-medium">{user?.role === 'ADMIN' ? t('common.administrator') : t('common.manager')}</dd>
+          </div>
+        </dl>
+        <div className="mt-5">
+          <PasswordForm />
+        </div>
+      </Card>
+      {user?.role === 'ADMIN' ? (
+        <Card className="mt-4 max-w-2xl p-5 sm:p-6">
+          <h2 className="text-base font-semibold text-ink">{t('settings.usersTitle')}</h2>
+          <UsersSection />
+        </Card>
+      ) : null}
     </div>
   )
 }

@@ -2,6 +2,7 @@ import { execSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import assert from 'node:assert/strict'
+import jwt from 'jsonwebtoken'
 
 const root = path.resolve(__dirname, '../..')
 const databasePath = '/tmp/cmh-integration.db'
@@ -255,6 +256,119 @@ async function main() {
   assert.equal(stillThere.body.stats.totalServices, 2)
   assert.equal(stillThere.body.payments.length, 2)
   assert.equal(stillThere.body.employee.fullName, 'John Smith')
+
+  const admin = await prisma.user.findUnique({ where: { email: 'manager@cmhcleaning.test' } })
+  assert.ok(admin)
+  assert.equal(admin.active, true)
+  assert.equal(admin.tokenVersion, 0)
+  const legacy = jwt.sign({ sub: admin.id, role: 'ADMIN' }, process.env.JWT_SECRET ?? '', { expiresIn: '1h' })
+  const legacyMe = await request(app).get('/api/auth/me').set('Cookie', [`cmh_session=${legacy}`])
+  assert.equal(legacyMe.status, 200)
+  assert.equal(legacyMe.body.user.email, 'manager@cmhcleaning.test')
+
+  const otherBrowser = request.agent(app)
+  const otherLogin = await otherBrowser.post('/api/auth/login').send({ email: 'manager@cmhcleaning.test', password: 'correct-horse' })
+  assert.equal(otherLogin.status, 200)
+  const changed = await agent.post('/api/auth/change-password').send({ currentPassword: 'correct-horse', newPassword: 'updated-horse-1' })
+  assert.equal(changed.status, 200)
+  const stillSignedIn = await agent.get('/api/auth/me')
+  assert.equal(stillSignedIn.status, 200)
+  const otherSignedOut = await otherBrowser.get('/api/auth/me')
+  assert.equal(otherSignedOut.status, 401)
+  const oldPassword = await request(app).post('/api/auth/login').send({ email: 'manager@cmhcleaning.test', password: 'correct-horse' })
+  assert.equal(oldPassword.status, 401)
+  const legacyAfter = await request(app).get('/api/auth/me').set('Cookie', [`cmh_session=${legacy}`])
+  assert.equal(legacyAfter.status, 401)
+  const refreshed = await prisma.user.findUnique({ where: { id: admin.id } })
+  assert.equal(refreshed?.tokenVersion, 1)
+  assert.notEqual(refreshed?.passwordHash, admin.passwordHash)
+
+  const anonymous = await request(app).get('/api/users')
+  assert.equal(anonymous.status, 401)
+  const rejected = await agent.post('/api/users').send({ name: 'A', email: 'not-an-email', password: 'short', role: 'EMPLOYEE' })
+  assert.equal(rejected.status, 400)
+
+  const createdManager = await agent.post('/api/users').send({
+    name: 'Pat Manager',
+    email: 'Pat.Manager@cmhcleaning.test',
+    password: 'manager-pass-88',
+    role: 'MANAGER',
+  })
+  assert.equal(createdManager.status, 201, JSON.stringify(createdManager.body))
+  assert.equal(createdManager.body.user.email, 'pat.manager@cmhcleaning.test')
+  assert.equal(createdManager.body.user.role, 'MANAGER')
+  assert.equal(createdManager.body.user.active, true)
+  assert.equal(Object.hasOwn(createdManager.body.user, 'passwordHash'), false)
+  const duplicateAccount = await agent.post('/api/users').send({
+    name: 'Pat Again',
+    email: 'pat.manager@cmhcleaning.test',
+    password: 'manager-pass-88',
+    role: 'MANAGER',
+  })
+  assert.equal(duplicateAccount.status, 409)
+
+  const selfOff = await agent.post(`/api/users/${admin.id}/active`).send({ active: false })
+  assert.equal(selfOff.status, 400)
+  assert.equal(selfOff.body.error, 'You cannot deactivate your own account.')
+  const selfRole = await agent.post(`/api/users/${admin.id}/role`).send({ role: 'MANAGER' })
+  assert.equal(selfRole.status, 400)
+  assert.equal(selfRole.body.error, 'The last active administrator must stay an active administrator.')
+  const selfReset = await agent.post(`/api/users/${admin.id}/reset-password`).send({ password: 'another-pass-88' })
+  assert.equal(selfReset.status, 400)
+
+  const secondAdmin = await agent.post('/api/users').send({
+    name: 'Second Admin',
+    email: 'second.admin@cmhcleaning.test',
+    password: 'second-admin-88',
+    role: 'ADMIN',
+  })
+  assert.equal(secondAdmin.status, 201)
+  const secondId = secondAdmin.body.user.id as string
+  const deactivated = await agent.post(`/api/users/${secondId}/active`).send({ active: false })
+  assert.equal(deactivated.status, 200)
+  assert.equal(deactivated.body.user.active, false)
+  const inactiveLogin = await request(app).post('/api/auth/login').send({ email: 'second.admin@cmhcleaning.test', password: 'second-admin-88' })
+  assert.equal(inactiveLogin.status, 403)
+  assert.equal(inactiveLogin.body.error, 'This account is inactive.')
+  const lastOff = await agent.post(`/api/users/${admin.id}/active`).send({ active: false })
+  assert.equal(lastOff.status, 400)
+  const reactivated = await agent.post(`/api/users/${secondId}/active`).send({ active: true })
+  assert.equal(reactivated.status, 200)
+  const secondBrowser = request.agent(app)
+  const secondLogin = await secondBrowser.post('/api/auth/login').send({ email: 'second.admin@cmhcleaning.test', password: 'second-admin-88' })
+  assert.equal(secondLogin.status, 200)
+  const reset = await agent.post(`/api/users/${secondId}/reset-password`).send({ password: 'second-reset-88' })
+  assert.equal(reset.status, 200)
+  assert.equal(Object.hasOwn(reset.body, 'password'), false)
+  assert.equal((await secondBrowser.get('/api/users')).status, 401)
+  assert.equal((await request(app).post('/api/auth/login').send({ email: 'second.admin@cmhcleaning.test', password: 'second-admin-88' })).status, 401)
+  assert.equal((await request(app).post('/api/auth/login').send({ email: 'second.admin@cmhcleaning.test', password: 'second-reset-88' })).status, 200)
+  const demoted = await agent.post(`/api/users/${secondId}/role`).send({ role: 'MANAGER' })
+  assert.equal(demoted.status, 200)
+  assert.equal(demoted.body.user.role, 'MANAGER')
+  assert.equal((await agent.post(`/api/users/${admin.id}/role`).send({ role: 'MANAGER' })).status, 400)
+
+  const managerBrowser = request.agent(app)
+  const managerLogin = await managerBrowser.post('/api/auth/login').send({ email: 'pat.manager@cmhcleaning.test', password: 'manager-pass-88' })
+  assert.equal(managerLogin.status, 200)
+  assert.equal((await managerBrowser.get('/api/users')).status, 403)
+  assert.equal((await managerBrowser.post('/api/users').send({ name: 'Nope Person', email: 'nope.person@cmhcleaning.test', password: 'manager-pass-88', role: 'MANAGER' })).status, 403)
+  assert.equal((await managerBrowser.get('/api/employees')).status, 200)
+
+  const listed = await agent.get('/api/users')
+  assert.equal(listed.status, 200)
+  assert.equal(listed.body.users.length, 3)
+  for (const row of listed.body.users as Array<Record<string, unknown>>) {
+    assert.equal(Object.hasOwn(row, 'passwordHash'), false)
+    assert.equal(Object.hasOwn(row, 'tokenVersion'), false)
+  }
+  assert.equal(await prisma.employee.count(), 1)
+  assert.equal(await prisma.user.count(), 3)
+  const books = await agent.get('/api/dashboard').query({ from: '2026-10-01', to: '2026-10-03' })
+  assert.equal(books.body.kpis.revenue.amount, 43000)
+  assert.equal(books.body.kpis.employeePayments.amount, 20000)
+  assert.equal(books.body.kpis.expenses.amount, 3500)
+  assert.equal(books.body.kpis.profit.amount, 19500)
 
   console.log('Integration workflow passed.')
   await prisma.$disconnect()

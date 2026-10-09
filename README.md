@@ -45,7 +45,7 @@ npm run build
 
 `npm run admin:create` asks for your name, email and a password of at least 8 characters. This is the only sign-in. There is no public registration page. Use your own email and password. Do not reuse an example password.
 
-There is one administrator account for the owner. A second person can have an account later with `npm run admin:create` and a different email. Both accounts use the same records on the office computer.
+The first account is an administrator. After signing in, that person can add other administrators and managers in Settings. `npm run admin:create` can still add an administrator from this computer. Cleaning employees are not login accounts. Every account uses the same records on the office computer.
 
 ## Every day
 
@@ -269,4 +269,4 @@ npm run typecheck
 - No sample financial records
 - No email password reset
 - No bank, card or payment-provider connection
-- No extra permission levels. Each account created with `npm run admin:create` is an administrator
+- No employee login. Cleaning employees stay in the employee list. Login accounts are administrators or managers.

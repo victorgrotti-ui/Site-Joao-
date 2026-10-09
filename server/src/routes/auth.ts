@@ -43,6 +43,7 @@ authRouter.post(
       recordLoginFailure(`${req.ip}:${normalised}`)
       throw new HttpError(401, 'Email or password is incorrect.')
     }
+    if (!user.active) throw new HttpError(403, 'This account is inactive.')
     attempts.delete(`${req.ip}:${normalised}`)
     const token = signToken(user)
     res.cookie(COOKIE_NAME, token, cookieOptions())
@@ -73,10 +74,11 @@ authRouter.post(
     if (!user) throw new HttpError(401, 'Please sign in.')
     const valid = await verifyPassword(currentPassword, user.passwordHash)
     if (!valid) throw new HttpError(400, 'The current password is incorrect.', { details: { currentPassword: 'The current password is incorrect.' } })
-    await prisma.user.update({
+    const updated = await prisma.user.update({
       where: { id: user.id },
-      data: { passwordHash: await hashPassword(newPassword) },
+      data: { passwordHash: await hashPassword(newPassword), tokenVersion: { increment: 1 } },
     })
+    res.cookie(COOKIE_NAME, signToken(updated), cookieOptions())
     res.json({ ok: true })
   }),
 )

@@ -68,13 +68,15 @@ npm run build
 
 `npm run db:office` creates `prisma/production.db`, applies the Prisma migrations, and saves the company name CMH Cleaning with currency GBP. It does not add employees, services, expenses or payments. If `.env` still points at `prisma/dev.db`, the command stops and leaves that file unchanged.
 
+When you download a newer copy of this project, run `npm run db:office` again before `npm start`. It applies new migrations and leaves existing people, jobs, expenses and payments in place. Do not run `npm run db:reset` on the office computer.
+
 ## First administrator
 
 `npm run admin:create` asks for a name, an email and a password of at least 8 characters. Type them on the office computer. The password is stored only as a bcrypt hash inside `prisma/production.db`. It is not written into the source code, and it must not be saved in `.env`.
 
-There is no public registration page. A later administrator can be added with the same command and a different email.
+There is no public registration page. After the first administrator signs in, further administrators and managers are added in Settings. The same command can still add an administrator from this computer. Cleaning employees are not login accounts.
 
-If the password is forgotten, on the office computer:
+If the password is forgotten, another administrator can set a new one in Settings. That signs the account out of other browsers. If nobody can sign in, on the office computer:
 
 ```bash
 npm run admin:reset-password
