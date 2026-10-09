@@ -5,7 +5,7 @@ import cors from 'cors'
 import express from 'express'
 import helmet from 'helmet'
 import { errorHandler } from './middleware/error'
-import { requireAuth } from './middleware/auth'
+import { requireAdmin, requireAuth } from './middleware/auth'
 import { authRouter } from './routes/auth'
 import { dashboardRouter } from './routes/dashboard'
 import { employeesRouter } from './routes/employees'
@@ -14,6 +14,7 @@ import { paymentsRouter } from './routes/payments'
 import { reportsRouter } from './routes/reports'
 import { servicesRouter } from './routes/services'
 import { settingsRouter } from './routes/settings'
+import { usersRouter } from './routes/users'
 import './types'
 
 export function createApp() {
@@ -41,6 +42,7 @@ export function createApp() {
   app.use('/api/dashboard', requireAuth, dashboardRouter)
   app.use('/api/reports', requireAuth, reportsRouter)
   app.use('/api/settings', requireAuth, settingsRouter)
+  app.use('/api/users', requireAuth, requireAdmin, usersRouter)
 
   app.use('/api', (_req, res) => {
     res.status(404).json({ error: 'Not found.' })

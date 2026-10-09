@@ -59,6 +59,37 @@ export const changePasswordSchema = z.object({
   newPassword: z.string().min(8, 'Use at least 8 characters.').max(72, 'Password is too long.'),
 })
 
+const accountEmail = z
+  .string()
+  .trim()
+  .email('Enter a valid email address.')
+  .transform((value) => value.toLowerCase())
+
+const accountPassword = z.string().min(8, 'Use at least 8 characters.').max(72, 'Password is too long.')
+
+const accountRole = z.string().refine((value): value is 'ADMIN' | 'MANAGER' => value === 'ADMIN' || value === 'MANAGER', {
+  message: 'Choose a valid role.',
+})
+
+export const createAccountSchema = z.object({
+  name: z.string().trim().min(2, 'Enter the person’s name.').max(120),
+  email: accountEmail,
+  password: accountPassword,
+  role: accountRole,
+})
+
+export const resetAccountPasswordSchema = z.object({
+  password: accountPassword,
+})
+
+export const accountActiveSchema = z.object({
+  active: z.boolean(),
+})
+
+export const accountRoleSchema = z.object({
+  role: accountRole,
+})
+
 export const employeeSchema = z.object({
   fullName: z.string().trim().min(2, 'Enter the employee’s full name.').max(120),
   phone: optionalPhone,

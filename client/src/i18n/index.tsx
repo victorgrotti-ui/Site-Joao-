@@ -60,6 +60,15 @@ const serverMessages: Record<string, string> = {
   'Enter an amount greater than zero.': 'errors.amountPositive',
   'The period start must be on or before the period end.': 'errors.periodOrder',
   'Enter the company name.': 'errors.companyName',
+  'This account is inactive.': 'errors.inactiveAccount',
+  'Only an administrator can manage accounts.': 'errors.adminOnly',
+  'An account with this email already exists.': 'errors.duplicateAccount',
+  'Account not found.': 'errors.accountNotFound',
+  'You cannot deactivate your own account.': 'errors.deactivateSelf',
+  'The last active administrator must stay an active administrator.': 'errors.lastAdmin',
+  'Use My account to change your own password.': 'errors.resetSelf',
+  'Enter the person’s name.': 'errors.personName',
+  'Choose a valid role.': 'errors.validRole',
 }
 
 function readLocale(): Locale {

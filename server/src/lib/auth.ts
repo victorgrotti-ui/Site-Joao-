@@ -19,15 +19,18 @@ function secret(): string {
   return value
 }
 
-export function signToken(user: { id: string; role: string }): string {
-  return jwt.sign({ sub: user.id, role: user.role }, secret(), { expiresIn: '7d' })
+export function signToken(user: { id: string; role: string; tokenVersion: number }): string {
+  return jwt.sign({ sub: user.id, role: user.role, ver: user.tokenVersion }, secret(), { expiresIn: '7d' })
 }
 
-export function readToken(token: string): { sub: string; role: string } | null {
+export function readToken(token: string): { sub: string; role: string; ver: number } | null {
   try {
     const payload = jwt.verify(token, secret())
     if (typeof payload === 'string' || !payload.sub) return null
-    return { sub: payload.sub, role: String(payload.role ?? '') }
+    const raw = payload.ver
+    const ver = raw == null ? 0 : Number(raw)
+    if (!Number.isInteger(ver) || ver < 0) return null
+    return { sub: payload.sub, role: String(payload.role ?? ''), ver }
   } catch {
     return null
   }

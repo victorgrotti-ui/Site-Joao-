@@ -1,44 +1,13 @@
-import { useState } from 'react'
-import { Button, Card, Field, PageHeader, TextInput } from '../components/ui'
+import { PasswordForm } from '../components/PasswordForm'
+import { Button, Card, PageHeader } from '../components/ui'
 import { useAuth } from '../context/AuthContext'
-import { useToast } from '../context/ToastContext'
 import { useI18n } from '../i18n'
-import { api, errorMessage, fieldErrors } from '../lib/api'
 import { useTitle } from '../lib/useTitle'
 
 export function ProfilePage() {
-  const { t, text } = useI18n()
+  const { t } = useI18n()
   useTitle(t('profile.title'))
   const { user, logout } = useAuth()
-  const toast = useToast()
-  const [currentPassword, setCurrentPassword] = useState('')
-  const [newPassword, setNewPassword] = useState('')
-  const [confirm, setConfirm] = useState('')
-  const [errors, setErrors] = useState<Record<string, string>>({})
-  const [busy, setBusy] = useState(false)
-
-  async function save() {
-    const next: Record<string, string> = {}
-    if (!currentPassword) next.currentPassword = t('validation.currentPassword')
-    if (newPassword.length < 8) next.newPassword = t('validation.passwordLength')
-    if (newPassword !== confirm) next.confirm = t('validation.passwordMatch')
-    setErrors(next)
-    if (Object.keys(next).length) return
-    setBusy(true)
-    try {
-      await api('/api/auth/change-password', { method: 'POST', body: { currentPassword, newPassword } })
-      setCurrentPassword('')
-      setNewPassword('')
-      setConfirm('')
-      toast.success(t('profile.updated'))
-    } catch (caught) {
-      const details = fieldErrors(caught)
-      setErrors(Object.fromEntries(Object.entries(details).map(([key, value]) => [key, text(value)])))
-      toast.error(text(errorMessage(caught)))
-    } finally {
-      setBusy(false)
-    }
-  }
 
   return (
     <div>
@@ -54,17 +23,8 @@ export function ProfilePage() {
         </Card>
         <Card className="p-5">
           <h2 className="text-base font-semibold">{t('profile.change')}</h2>
-          <div className="mt-4 space-y-4">
-            <Field label={t('profile.current')} error={errors.currentPassword}>
-              <TextInput type="password" autoComplete="current-password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} />
-            </Field>
-            <Field label={t('profile.next')} error={errors.newPassword}>
-              <TextInput type="password" autoComplete="new-password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} />
-            </Field>
-            <Field label={t('profile.confirm')} error={errors.confirm}>
-              <TextInput type="password" autoComplete="new-password" value={confirm} onChange={(event) => setConfirm(event.target.value)} />
-            </Field>
-            <Button onClick={() => void save()} disabled={busy}>{busy ? t('common.saving') : t('profile.update')}</Button>
+          <div className="mt-4">
+            <PasswordForm />
           </div>
         </Card>
       </div>

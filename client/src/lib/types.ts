@@ -5,6 +5,11 @@ export interface User {
   role: 'ADMIN' | 'MANAGER'
 }
 
+export interface AccountUser extends User {
+  active: boolean
+  createdAt: string
+}
+
 export interface Employee {
   id: string
   fullName: string

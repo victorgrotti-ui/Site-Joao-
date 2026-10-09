@@ -53,9 +53,9 @@ async function main() {
 
   await prisma.user.update({
     where: { id: user.id },
-    data: { passwordHash: await hashPassword(password) },
+    data: { passwordHash: await hashPassword(password), tokenVersion: { increment: 1 } },
   })
-  console.log(`Password updated for ${email}.`)
+  console.log(`Password updated for ${email}. Other browsers using this account must sign in again.`)
 }
 
 main()
