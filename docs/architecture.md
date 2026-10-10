@@ -5,7 +5,7 @@ CMH Cleaning Management System is a local web app in three parts.
 ```text
 client/     React, TypeScript, Vite, Tailwind CSS
 server/     Express, TypeScript
-prisma/     SQLite schema and migrations
+prisma/     Supabase PostgreSQL schema and migrations
 public/     Logo used by the Vite app
 docs/       Finance rules and this note
 ```
@@ -51,4 +51,4 @@ Deleting an employee who already has services, expenses or payments disables the
 
 ## Office database
 
-The office computer uses `prisma/production.db`, created by `npm run db:office`. That command applies the Prisma migrations and the company settings only. It does not copy `prisma/dev.db` and it does not add employees, services, expenses or payments. `prisma/dev.db` is the development database and must not be used for company records. Do not point the office server at a cloud database. The SQLite `PRAGMA` used at startup runs only when `DATABASE_URL` starts with `file:`. Backups use `VACUUM INTO`, which writes one consistent file even while SQLite is in WAL mode.
+The office computer stores company records in Supabase. `DATABASE_URL` is the pooled PostgreSQL URL and `DIRECT_URL` is the direct URL. Both stay in `.env` on the server. `npm run db:office` applies Prisma migrations and company settings. It does not delete employees, services, expenses or payments. `npm run db:import-sqlite -- path` copies an existing SQLite file into Supabase, including password hashes, and does not print those hashes. `prisma/dev.db` must not be imported.

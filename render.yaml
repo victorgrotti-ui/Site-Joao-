@@ -1,5 +1,5 @@
 # Not used for the office installation. Do not create a Render service from this file.
-# The office computer uses .env, prisma/production.db, and npm start.
+# The office computer uses .env with the Supabase DATABASE_URL and DIRECT_URL, then npm start.
 # This file does not change local startup unless someone deploys it.
 services:
   - type: web
@@ -13,7 +13,9 @@ services:
       - key: NODE_VERSION
         value: "22"
       - key: DATABASE_URL
-        value: file:./production.db
+        sync: false
+      - key: DIRECT_URL
+        sync: false
       - key: CMH_BIND
         value: 0.0.0.0
       - key: COOKIE_SECURE

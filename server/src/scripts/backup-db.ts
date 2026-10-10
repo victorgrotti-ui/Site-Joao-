@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import { sqliteFilePath } from '../lib/database-file'
+import { isPostgresUrl, sqliteFilePath } from '../lib/database-file'
 import { prisma } from '../lib/prisma'
 
 function stamp(): string {
@@ -10,6 +10,11 @@ function stamp(): string {
 }
 
 async function main() {
+  if (isPostgresUrl()) {
+    console.error('Company records are in Supabase. Backups are made in the Supabase dashboard: Database → Backups.')
+    console.error('This command does not download or change that database.')
+    process.exit(1)
+  }
   const source = sqliteFilePath()
   if (!fs.existsSync(source)) {
     console.error(`Database not found at ${source}. Run npm run db:setup first.`)

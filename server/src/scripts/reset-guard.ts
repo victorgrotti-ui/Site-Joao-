@@ -1,9 +1,15 @@
 import { execFileSync } from 'child_process'
 import path from 'path'
 import dotenv from 'dotenv'
-import { isDevelopmentDatabaseFile, sqliteFilePath } from '../lib/database-file'
+import { isDevelopmentDatabaseFile, isPostgresUrl, sqliteFilePath } from '../lib/database-file'
 
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') })
+
+if (isPostgresUrl()) {
+  console.error('Refusing to reset the Supabase database.')
+  console.error('Company records stay in Supabase. This command is only for a local development file named dev.db.')
+  process.exit(1)
+}
 
 const file = sqliteFilePath()
 if (!isDevelopmentDatabaseFile(file)) {

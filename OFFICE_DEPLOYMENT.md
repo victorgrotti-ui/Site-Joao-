@@ -1,22 +1,15 @@
 # CMH Cleaning — office computer installation
 
-CMH Cleaning runs on one office computer. That computer holds the company database. Other phones and laptops on the same office Wi-Fi open it in a browser. The system is not published on the internet.
+CMH Cleaning runs on one office computer. Company records are stored in Supabase. Other phones and laptops on the same office Wi-Fi open the office computer in a browser. The database password stays in `.env` on that computer. The browser never receives it.
 
-Do not forward port 3001. Do not use a cloud database. Do not copy `prisma/dev.db` onto this computer and use it as the company database. `prisma/dev.db` is only for development.
+Do not forward port 3001. Do not import `prisma/dev.db`. That file is only for development.
 
-Company records belong in:
-
-```text
-prisma/production.db
-```
-
-The setting in `.env` is:
+In `.env`, set the two Supabase connection strings from Project Settings → Database:
 
 ```text
-DATABASE_URL="file:./production.db"
+DATABASE_URL="postgresql://...pooler.supabase.com:6543/postgres?pgbouncer=true"
+DIRECT_URL="postgresql://...pooler.supabase.com:5432/postgres"
 ```
-
-That path is relative to the `prisma` folder.
 
 ## Required software
 
@@ -44,13 +37,7 @@ npm install
 cp .env.example .env
 ```
 
-Open `.env` in a text editor. `DATABASE_URL` must stay:
-
-```text
-DATABASE_URL="file:./production.db"
-```
-
-Replace `JWT_SECRET` with a long random value. On either computer:
+Open `.env` in a text editor. Paste the Supabase `DATABASE_URL` and `DIRECT_URL`. Replace `JWT_SECRET` with a long random value. On either computer:
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
@@ -58,7 +45,7 @@ node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
 
 Paste the result between the quotes. Do not put it in an email or in the git repository. Leave `PORT=3001`. Leave `HOST` unset. Leave `COOKIE_SECURE` unset. Leave `CMH_BIND` unset.
 
-Create the empty company database, then the administrator, then build:
+Create the Supabase tables, then the administrator, then build:
 
 ```bash
 npm run db:office
@@ -66,13 +53,21 @@ npm run admin:create
 npm run build
 ```
 
-`npm run db:office` creates `prisma/production.db`, applies the Prisma migrations, and saves the company name CMH Cleaning with currency GBP. It does not add employees, services, expenses or payments. If `.env` still points at `prisma/dev.db`, the command stops and leaves that file unchanged.
+`npm run db:office` creates the Supabase tables, applies the Prisma migrations, and saves the company name CMH Cleaning with currency GBP when that settings row is missing. It does not delete employees, services, expenses or payments.
 
-When you download a newer copy of this project, run `npm run db:office` again before `npm start`. It applies new migrations and leaves existing people, jobs, expenses and payments in place. Do not run `npm run db:reset` on the office computer.
+To copy an existing SQLite company file into Supabase, stop the old server and run:
+
+```bash
+npm run db:import-sqlite -- path\to\production.db
+```
+
+That copies accounts, employees, jobs, expenses, payments and company settings. Password hashes are copied and are not printed. Do not point this command at `prisma/dev.db`.
+
+When you download a newer copy of this project, run `npm run db:office` again before `npm start`. It applies new migrations and leaves existing rows in place. Do not run `npm run db:reset`.
 
 ## First administrator
 
-`npm run admin:create` asks for a name, an email and a password of at least 8 characters. Type them on the office computer. The password is stored only as a bcrypt hash inside `prisma/production.db`. It is not written into the source code, and it must not be saved in `.env`.
+`npm run admin:create` asks for a name, an email and a password of at least 8 characters. Type them on the office computer. The password is stored only as a bcrypt hash in Supabase. It is not written into the source code, and it must not be saved in `.env`. Skip this command if `npm run db:import-sqlite` already copied the administrator.
 
 There is no public registration page. After the first administrator signs in, further administrators and managers are added in Settings. The same command can still add an administrator from this computer. Cleaning employees are not login accounts.
 
@@ -145,36 +140,12 @@ A phone cannot use `127.0.0.1`. The phone uses `http://192.168.x.x:3001`.
 
 ## Backup
 
-The database uses SQLite WAL mode. While the server is running, the newest rows may sit in `prisma/production.db-wal`. Copying `prisma/production.db` by hand at that moment can save an incomplete file.
-
-Use this instead. It is safe while the server is running. SQLite writes one consistent file with `VACUUM INTO`:
-
-```bash
-npm run db:backup
-```
-
-The file is:
-
-```text
-backups/cmh-backup-YYYYMMDD-HHMMSS.db
-```
-
-Copy it to a USB drive that stays in the office. Do not email it. Do not upload it. Do not commit it.
+Open the Supabase dashboard, then Database, then Backups. Do not email an export and do not commit it. `npm run db:backup` does not copy Supabase.
 
 ## Restore
 
-1. Close the server window.
-2. Run:
-
-```bash
-npm run db:restore -- backups/cmh-backup-YYYYMMDD-HHMMSS.db
-```
-
-3. Type `RESTORE` and press Enter.
-4. Start the server again with `npm start` and sign in.
-
-The command refuses to run while the server still has the database open. It also refuses a file that is not a SQLite database. Do not run `npm run db:reset` on the office computer.
+Restore from the Supabase dashboard. `npm run db:restore` refuses to replace the Supabase database. Do not run `npm run db:reset`.
 
 ## Money
 
-Amounts are stored as whole pence. Profit is revenue minus the employee payment, cleaning products and other expenses. A reimbursable cost is one expense, and it is also added to what the employee is owed. It is not subtracted a second time. Mark as Paid only updates the record on this computer. It does not send a bank or card payment.
+Amounts are stored as whole pence. Profit is revenue minus the employee payment, cleaning products and other expenses. A reimbursable cost is one expense, and it is also added to what the employee is owed. It is not subtracted a second time. Mark as Paid only updates the record in Supabase. It does not send a bank or card payment.

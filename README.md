@@ -2,7 +2,7 @@
 
 The installation steps for the owner’s computer are in [OFFICE_DEPLOYMENT.md](OFFICE_DEPLOYMENT.md).
 
-CMH Cleaning runs on **one office computer**. That computer keeps the company records in `prisma/production.db`. You open the system in a web browser. A phone on the same office Wi-Fi opens the same records. Nothing is put on the public internet. Do not use `prisma/dev.db` for company records. That file is only for development.
+CMH Cleaning runs on **one office computer**. Company records are stored in Supabase (PostgreSQL). You open the system in a web browser. A phone on the same office Wi-Fi opens the same records. The browser never receives the database password. Do not use `prisma/dev.db` for company records.
 
 **Do not forward port 3001 to the internet.**
 
@@ -55,7 +55,7 @@ C. Open the browser on that computer.
 D. Go to http://cmh-cleaning.local:3001
 E. Sign in.
 F. Use the system. Add employees, cleaning jobs, expenses and payments here.
-G. When you want a spare copy of the records, create a backup. The steps are below.
+G. Supabase keeps the company records. Backups are made in the Supabase dashboard under Database → Backups.
 
 Leave the server window open. Closing it stops the system for every device.
 
@@ -117,37 +117,11 @@ Mac:
 
 ## Backup
 
-On the office computer, in the project folder, while the server can stay running:
-
-```bash
-npm run db:backup
-```
-
-The file is created here:
-
-```text
-backups/cmh-backup-YYYYMMDD-HHMMSS.db
-```
-
-Example: `backups/cmh-backup-20261007-093000.db`
-
-Copy that file onto a USB drive that stays in the office. Do not email it. Do not upload it. Do not commit it.
-
-Take a backup before replacing the office computer.
+Company records are in Supabase. Open the Supabase dashboard, then Database, then Backups. Do not email a database export and do not commit it.
 
 ## Restore
 
-1. Close the server window.
-2. In the project folder, run:
-
-```bash
-npm run db:restore -- backups/cmh-backup-YYYYMMDD-HHMMSS.db
-```
-
-3. Type `RESTORE` and press Enter.
-4. Start the server again and sign in.
-
-The command stops if the server is still using the records, and it stops if the file is not a database backup.
+Restore a backup from the Supabase dashboard. `npm run db:restore` does not replace the Supabase database.
 
 ## Forgot the password
 
@@ -159,13 +133,7 @@ npm run admin:reset-password
 
 ## Where the records live
 
-```text
-prisma/production.db
-```
-
-Employees, jobs, expenses, payments, reimbursements and profit all come from this file. Reports are calculated from it. Restarting the server does not delete it. The phone never stores a separate copy. `npm run db:office` creates this file empty. It does not copy `prisma/dev.db`.
-
-While the server is running, two extra files may appear next to it: `prisma/production.db-wal` and `prisma/production.db-shm`. Leave them alone. Do not copy those files by hand while the server is open. Use `npm run db:backup`, which saves one consistent file.
+Employees, jobs, expenses, payments, reimbursements and profit are stored in Supabase. Reports are calculated from those rows. Restarting the office computer does not delete them. The phone never stores a separate copy. `npm run db:office` creates missing tables and does not delete existing rows.
 
 ## Troubleshooting
 
@@ -179,7 +147,7 @@ While the server is running, two extra files may appear next to it: `prisma/prod
 
 - No public registration
 - No anonymous access to company records
-- No cloud database
+- The database password stays in `.env` on the office computer
 - No payment-provider connection
 - The secret in `.env` stays on the office computer and must not be committed
 
@@ -206,14 +174,14 @@ npm start
 | --- | --- |
 | `npm run dev` | Development only, on the office computer, at http://localhost:5173. Other devices must not use this. |
 | `npm start` | The internal system. The browser and the records are served together on port 3001. |
-| `npm run db:office` | Creates empty `prisma/production.db` and company settings. It refuses to use `prisma/dev.db`. |
-| `npm run db:setup` | Development only. Uses whatever `DATABASE_URL` is set, usually `prisma/dev.db`. |
-| `npm run db:backup` | Writes `backups/cmh-backup-YYYYMMDD-HHMMSS.db` with SQLite `VACUUM INTO` |
-| `npm run db:restore -- <file>` | Replaces the database with a backup after you type `RESTORE` |
+| `npm run db:office` | Applies Supabase migrations and company settings. It does not delete existing rows. |
+| `npm run db:setup` | Development only. Applies migrations to the `DATABASE_URL` database and saves company settings. |
+| `npm run db:import-sqlite` | Copies a SQLite company file into Supabase. Refuses `prisma/dev.db`. |
+| `npm run db:restore -- <file>` | Refuses to replace Supabase. Restore from the Supabase dashboard. |
 | `npm run admin:create` | Creates an administrator. Passwords are stored as bcrypt hashes. |
 | `npm run admin:reset-password` | Sets a new administrator password on this computer |
 
-`DATABASE_URL="file:./production.db"` is relative to the `prisma` folder. `HOST` stays unset so the server listens on this computer and on private office addresses only. It does not listen on a public internet address. Set `HOST=127.0.0.1` only to keep other devices out. Leave `COOKIE_SECURE` unset for the internal `http://` address. Leave `CMH_BIND` unset.
+`DATABASE_URL` is the Supabase pooled PostgreSQL URL and `DIRECT_URL` is the direct URL. `HOST` stays unset so the server listens on this computer and on private office addresses only. It does not listen on a public internet address. Set `HOST=127.0.0.1` only to keep other devices out. Leave `COOKIE_SECURE` unset for the internal `http://` address. Leave `CMH_BIND` unset.
 
 To avoid showing the password while creating the account:
 
@@ -227,10 +195,10 @@ Use a real password. Do not commit it.
 
 | Item | Why |
 | --- | --- |
-| `.env` | Contains `JWT_SECRET` |
+| `.env` | Contains `JWT_SECRET` and the Supabase connection strings |
 | `JWT_SECRET` | Signs the sign-in cookie |
 | `ADMIN_PASSWORD` | Only for the one command that creates an account |
-| `prisma/production.db` and its `-wal` / `-shm` files | Company records |
+| `prisma/production.db` and its `-wal` / `-shm` files | Old local copy, if you still have one. Do not commit it. |
 | `prisma/dev.db` and its `-wal` / `-shm` files | Development records. Do not use them as the company database. |
 | `backups/` | Copies of those records |
 
@@ -265,7 +233,7 @@ npm run typecheck
 
 ## What is intentionally not included
 
-- No public hosting, public domain or cloud database
+- No public hosting or public domain. Company records are in your own Supabase project.
 - No sample financial records
 - No email password reset
 - No bank, card or payment-provider connection
