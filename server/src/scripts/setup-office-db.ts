@@ -1,18 +1,8 @@
 import { execFileSync } from 'child_process'
-import fs from 'fs'
 import path from 'path'
-import { isDevelopmentDatabaseFile, sqliteFilePath } from '../lib/database-file'
+import { isPostgresUrl } from '../lib/database-file'
 import { officeDatabaseCommands } from '../lib/office-setup'
 import { prisma } from '../lib/prisma'
-
-function targetsDevelopmentDatabase(file: string): boolean {
-  if (isDevelopmentDatabaseFile(file)) return true
-  try {
-    return fs.existsSync(file) && isDevelopmentDatabaseFile(fs.realpathSync(file))
-  } catch {
-    return false
-  }
-}
 
 function prepareDatabase() {
   const root = path.resolve(__dirname, '../../..')
@@ -26,22 +16,13 @@ function prepareDatabase() {
 }
 
 async function main() {
-  const file = sqliteFilePath()
-  if (targetsDevelopmentDatabase(file)) {
-    console.error('Refusing to use prisma/dev.db as the company database.')
-    console.error('In .env set DATABASE_URL="file:./production.db"')
-    console.error('The development database was not changed.')
-    process.exit(1)
-  }
-  if (path.basename(file) !== 'production.db') {
-    console.error(`Refusing to create a company database at ${file}`)
-    console.error('The office database must be prisma/production.db.')
-    console.error('In .env set DATABASE_URL="file:./production.db"')
+  if (!isPostgresUrl() || !process.env.DIRECT_URL) {
+    console.error('Set DATABASE_URL and DIRECT_URL to the Supabase PostgreSQL connection strings.')
+    console.error('Supabase → Project Settings → Database. Use the pooler URL for DATABASE_URL and the direct URL for DIRECT_URL.')
     process.exit(1)
   }
 
-  console.log(`Preparing an empty company database at ${file}`)
-  console.log('Nothing is copied from prisma/dev.db.')
+  console.log('Applying migrations on Supabase. Existing company rows are not deleted.')
   prepareDatabase()
 
   const [users, employees, services, expenses, payments, settings] = await Promise.all([

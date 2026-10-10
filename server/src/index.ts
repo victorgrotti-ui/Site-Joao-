@@ -1,10 +1,8 @@
-import fs from 'fs'
 import os from 'os'
 import { createApp } from './app'
 import { ensureBootstrapAdmin } from './lib/bootstrap-admin'
-import { isDevelopmentDatabaseFile, sqliteFilePath } from './lib/database-file'
+import { isPostgresUrl } from './lib/database-file'
 import { FRIENDLY_HOST, advertiseFriendlyName, isPrivateLanAddress, listenTargets, publicBindRequested } from './lib/office-network'
-import { prisma } from './lib/prisma'
 import { ensureSettings } from './lib/settings'
 
 function detectedAddresses(): string[] {
@@ -19,8 +17,13 @@ function detectedAddresses(): string[] {
 }
 
 async function main() {
-  if (!process.env.DATABASE_URL) {
-    console.error('DATABASE_URL is missing. Copy .env.example to .env. On the office computer, run npm run db:office.')
+  if (!isPostgresUrl()) {
+    console.error('DATABASE_URL must be the Supabase PostgreSQL URL (postgresql://...).')
+    console.error('Copy it from Supabase → Project Settings → Database. Do not use a SQLite file.')
+    process.exit(1)
+  }
+  if (!process.env.DIRECT_URL) {
+    console.error('Set DIRECT_URL to the Supabase direct connection string.')
     process.exit(1)
   }
   const secret = process.env.JWT_SECRET ?? ''
@@ -28,26 +31,7 @@ async function main() {
     console.error('Set JWT_SECRET in .env to a long random string before starting the server.')
     process.exit(1)
   }
-
-  if (process.env.DATABASE_URL.startsWith('file:')) {
-    const databaseFile = sqliteFilePath()
-    if (!fs.existsSync(databaseFile)) {
-      console.error(`Database file not found at ${databaseFile}`)
-      console.error('On the office computer run: npm run db:office')
-      console.error('That creates prisma/production.db. It does not copy prisma/dev.db.')
-      process.exit(1)
-    }
-    if (isDevelopmentDatabaseFile(databaseFile)) {
-      console.warn('This window is using the development database prisma/dev.db.')
-      console.warn('Do not enter company records here.')
-      console.warn('On the office computer set DATABASE_URL="file:./production.db" and run npm run db:office.')
-    } else {
-      console.log(`Company database: ${databaseFile}`)
-    }
-    await prisma.$queryRawUnsafe('PRAGMA journal_mode = WAL;')
-    await prisma.$queryRawUnsafe('PRAGMA busy_timeout = 5000;')
-    await prisma.$queryRawUnsafe('PRAGMA foreign_keys = ON;')
-  }
+  console.log('Company database: Supabase.')
   await ensureSettings()
   await ensureBootstrapAdmin()
 

@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import readline from 'readline'
-import { sqliteFilePath } from '../lib/database-file'
+import { isPostgresUrl, sqliteFilePath } from '../lib/database-file'
 import { prisma } from '../lib/prisma'
 
 function ask(question: string): Promise<string> {
@@ -26,6 +26,11 @@ function isSqliteFile(file: string): boolean {
 }
 
 async function main() {
+  if (isPostgresUrl()) {
+    console.error('Refusing to replace the Supabase database from a local file.')
+    console.error('Restore a Supabase backup from the Supabase dashboard.')
+    process.exit(1)
+  }
   const requested = process.argv[2]
   if (!requested) {
     console.error('Usage: npm run db:restore -- backups/cmh-backup-YYYYMMDD-HHMMSS.db')

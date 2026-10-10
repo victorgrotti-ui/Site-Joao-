@@ -1,20 +1,19 @@
 import { execSync } from 'node:child_process'
-import fs from 'node:fs'
 import path from 'node:path'
 import assert from 'node:assert/strict'
 import jwt from 'jsonwebtoken'
 
 const root = path.resolve(__dirname, '../..')
-const databasePath = '/tmp/cmh-integration.db'
-for (const file of [databasePath, `${databasePath}-journal`, `${databasePath}-wal`, `${databasePath}-shm`]) {
-  fs.rmSync(file, { force: true })
-}
-
-process.env.DATABASE_URL = `file:${databasePath}`
+const databaseUrl = process.env.CMH_TEST_DATABASE_URL ?? 'postgresql://cmh:cmh-local-test@127.0.0.1:5432/cmh_integration'
+process.env.DATABASE_URL = databaseUrl
+process.env.DIRECT_URL = databaseUrl
 process.env.JWT_SECRET = 'integration-test-secret-key-123'
 process.env.CLIENT_ORIGIN = 'http://localhost:5173'
 process.env.NODE_ENV = 'test'
 
+execSync(`psql "${databaseUrl}" -v ON_ERROR_STOP=1 -c "DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public;"`, {
+  stdio: 'inherit',
+})
 execSync('npx prisma migrate deploy', {
   cwd: root,
   stdio: 'inherit',
